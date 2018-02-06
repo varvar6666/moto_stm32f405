@@ -4,6 +4,8 @@ uint8_t STATE = LOAD;
 uint8_t SET_TIME_STATE = SET_TIME_HOUR;
 uint8_t INPUT_SEL = FM;
 
+uint8_t OFF_counter = 0;
+
 uint8_t I2C_res;
 
 int main(void)
@@ -17,21 +19,22 @@ int main(void)
     /*-- Init main clock --*/
     Init_GPIO();
     Init_TFT();
-    
-
-    
+			
+    while(DMA1_Stream4->NDTR != 0){};
     loading_txt[8] = '2';
     loading_txt[9] = '5';
     TFT_send(loading_txt, sizeof(loading_txt));
     
     Init_RTC();
-    
+
+    while(DMA1_Stream4->NDTR != 0){};
     loading_txt[8] = '5';
     loading_txt[9] = '0';
     TFT_send(loading_txt, sizeof(loading_txt));
     
     Init_KEYs_TIM();
     
+		while(DMA1_Stream4->NDTR != 0){};
     loading_txt[8] = '7';
     loading_txt[9] = '5';
     TFT_send(loading_txt, sizeof(loading_txt));
@@ -55,10 +58,9 @@ int main(void)
     TFT_TIME[43] = ((RTC->DR & 0x1000)  >> 12) + 0x30;
     
   
-    STATE = MAIN;
+    STATE = AUDIO_OFF;
     TFT_send(pages[STATE], sizeof(pages[STATE]));
     TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
-
     TFT_send(TFT_TIME, sizeof(TFT_TIME));
     
     NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
@@ -88,24 +90,24 @@ void Init_RCC(void)
 
         /* Конфигурируем Flash на 2 цикла ожидания */
     	/* Это нужно потому, что Flash не может работать на высокой частоте */        
-    	FLASH->ACR &= (uint32_t)((uint32_t)~FLASH_ACR_LATENCY);
-    	FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_5WS;   
+				FLASH->ACR &= (uint32_t)((uint32_t)~FLASH_ACR_LATENCY);
+				FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_5WS;   
         
         /* HCLK = SYSCLK || AHB prescaler*/
         RCC->CFGR |= RCC_CFGR_HPRE_DIV1; //AHB clk = 100MHz
         
     	/* PCLK1 = HCLK || APB Low speed prescaler (APB1)*/
-    	RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE1_DIV4;
+				RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE1_DIV4;
 
         /* PCLK2 = HCLK || APB high-speed prescaler (APB2)*/
-    	RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV2;
+				RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV2;
         
         /* Set PLL input sourse*/
         RCC->PLLCFGR |= RCC_PLLCFGR_PLLSRC_HSI;
         
         /*Set PLL M prescaler */
         RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLM_Msk;
-        RCC->PLLCFGR |= (8 << RCC_PLLCFGR_PLLM_Pos);
+        RCC->PLLCFGR |= (8 << RCC_PLLCFGR_PLLM_Pos); //8
         
         /*Set PLL N prescaler */
         RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLN_Msk;
@@ -145,10 +147,8 @@ void SysTick_Handler(void)
     if (time == (SysTicksClk*5)) // 10s
     {
         time = 0;
-        if(STATE == MAIN)
+        if((STATE == MAIN)||(STATE == AUDIO_OFF))
         {
-            //TFT_TIME[14] = ((RTC->TR & 0xF00)   >> 8)  + 0x30;
-            //TFT_TIME[13] = ((RTC->TR & 0x7000)  >> 12) + 0x30;
             TFT_TIME[14] = ((RTC->TR & 0xF00)   >> 8)  + 0x30;
             TFT_TIME[13] = ((RTC->TR & 0x7000)  >> 12) + 0x30;
             
@@ -174,61 +174,60 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     static uint8_t mon;
     static uint8_t day;
     static uint8_t year;
-    
-//    if((GPIOE->IDR & GPIO_PIN_2)== 0)
-//    {
-//        if(STATE == MAIN)
-//        {
-//            INPUT_SEL++;
-//            if(INPUT_SEL>AUX) INPUT_SEL = FM;
-//            
-//            TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
-//            
-//            switch(INPUT_SEL)
-//            {
-//                case FM:{
-//                            i2c_buff[0] = TDA_Main_source_sel;
-//                            i2c_buff[1] = 0x82;
-//                            res = I2C1_Send(TDA7419_Adr, i2c_buff, sizeof(i2c_buff));
-//                            
-//                            TFT_send(TFT_text[INPUT_SEL],sizeof(TFT_text[INPUT_SEL]));
-//                
-//                    
-//                            break;
-//                        }
-//                case BT:{
-//                            i2c_buff[0] = TDA_Main_source_sel;
-//                            i2c_buff[1] = 0x84;
-//                            res = I2C1_Send(TDA7419_Adr, i2c_buff, sizeof(i2c_buff));
-//                            
-//                            TFT_send(TFT_text[INPUT_SEL],sizeof(TFT_text[INPUT_SEL]));
-//                
-//                
-//                    
-//                            break;
-//                        }            
-//                case USB:{
-//                            i2c_buff[0] = TDA_Main_source_sel;
-//                            i2c_buff[1] = 0x81;
-//                            res = I2C1_Send(TDA7419_Adr, i2c_buff, sizeof(i2c_buff));
-//                            
-//                            TFT_send(TFT_text[INPUT_SEL],sizeof(TFT_text[INPUT_SEL]));                
-//                
-//                    
-//                            break;
-//                        }
-//                case AUX:{
-//                            i2c_buff[0] = TDA_Main_source_sel;
-//                            i2c_buff[1] = 0x83;
-//                            res = I2C1_Send(TDA7419_Adr, i2c_buff, sizeof(i2c_buff));
-//                            
-//                            TFT_send(TFT_text[INPUT_SEL],sizeof(TFT_text[INPUT_SEL]));                
-//                            break;
-//                        }
-//                default: break;
-//            };
-//        }
-//    }
+	
+		uint8_t i2c_sel_buff[2];
+		
+		if(GPIOC->IDR & GPIO_PIN_5)
+    {
+				OFF_counter++;
+				if(STATE == MAIN)
+				{
+						if(OFF_counter >= 20)
+						{
+							i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+							i2c_sel_buff[1] = TDA_SOURCE_MUTE;
+							
+							I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+							
+							STATE = AUDIO_OFF;
+							
+							TFT_send(pages[STATE], sizeof(pages[STATE]));
+							/* ADD stop players  */
+						}
+				}
+    }
+		else
+		{
+				if((OFF_counter < 5)&&(OFF_counter != 0))
+				{
+						if(STATE == MAIN)
+						{
+							INPUT_SEL++;
+
+							if(INPUT_SEL>AUX) INPUT_SEL = FM;
+							
+							i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+							i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+							I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+							
+							TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+						}
+						if(STATE == AUDIO_OFF)
+						{
+							STATE = MAIN;
+							
+							TFT_send(pages[STATE], sizeof(pages[STATE]));
+
+							i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+							i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+							
+							I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+							
+							TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+						}
+				}
+				OFF_counter = 0;
+		}
     
     
     
@@ -411,6 +410,15 @@ void Init_GPIO(void)
     GPIOB->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN8*2 |
                       GPIO_SPEED_FREQ_VERY_HIGH << PIN9*2;    
     
+		GPIOC->MODER |= GPIO_MODE_INPUT << PIN0*2 |
+										GPIO_MODE_INPUT << PIN1*2 |
+										GPIO_MODE_INPUT << PIN2*2 |
+										GPIO_MODE_INPUT << PIN3*2 |
+										GPIO_MODE_INPUT << PIN4*2 |
+										GPIO_MODE_INPUT << PIN5*2 |
+										GPIO_MODE_INPUT << PIN6*2;
+		
+		
     
 }
 
@@ -449,13 +457,14 @@ void Init_TFT(void)
                        DMA_SxCR_MINC |
                        DMA_SxCR_CHSEL_2;
     DMA1_Stream4->PAR = (uint32_t) &UART4->DR;
-
 }
 
 void TFT_send(uint8_t *buff, uint8_t size)
 {
     while(DMA1_Stream4->NDTR != 0){};
-
+		
+//		DMA1->HIFCR |= DMA_HIFCR_CTCIF4 | DMA_HIFCR_CHTIF4 | DMA_HIFCR_CFEIF4;
+			
     DMA1_Stream4->M0AR = (uint32_t) buff;
     DMA1_Stream4->NDTR = size;
     DMA1->HIFCR = DMA_HIFCR_CTCIF4 |
@@ -541,7 +550,8 @@ uint8_t RDA_set_freq(uint16_t freq)
     RDA_buff[10]= 0x42; RDA_buff[11]= 0x02; //07HL:???
     
     return I2C1_Send(0xC0, RDA_buff,sizeof(RDA_buff));*/
-    uint8_t tea[5];
+    
+	  uint8_t tea[5];
     freq = (4*(freq*100000UL+225000UL))/32768;
     tea[0] = freq >> 8;
     tea[1] = freq & 0xff;
@@ -557,10 +567,10 @@ uint8_t Init_TDA(void)
     uint8_t init_buff[19];
     
     init_buff[0] = 0x20; // AI 1 + Subaddres 00000 - Main source sel
-    init_buff[1] = 0x82; // Main source = SE2(FM), gain = 0;
+    init_buff[1] = 0x87; // Main source = SE2(FM), gain = 0;
     init_buff[2] = 0x00; // Loudless off
     init_buff[3] = 0xC7; // CLK FM off, SM step 2.56, 0.96, I2C, off
-    init_buff[4] = 0x00; // soft_step + VOL 0;
+    init_buff[4] = 0x10; // VOL 0;
     init_buff[5] = 0x90; // Ref out ext + treble off;
     init_buff[6] = 0x50; // mid off
     init_buff[7] = 0x50; // bass off
@@ -576,5 +586,5 @@ uint8_t Init_TDA(void)
     init_buff[17]= 0x39; // SA on
     init_buff[18]= 0x00; //test mode off
     
-    return I2C1_Send(0x88, init_buff, sizeof(init_buff));
+    return I2C1_Send(TDA7419_ADRESS, init_buff, sizeof(init_buff));
 }
