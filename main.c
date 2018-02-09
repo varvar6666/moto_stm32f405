@@ -3,10 +3,13 @@
 uint8_t STATE = LOAD;
 uint8_t SET_TIME_STATE = SET_TIME_HOUR;
 uint8_t INPUT_SEL = FM;
+uint8_t prev_state;
 
 uint8_t OFF_counter = 0;
 
 uint8_t I2C_res;
+
+uint16_t RADIO_FREQ = 1040;
 
 int main(void)
 {
@@ -41,7 +44,7 @@ int main(void)
     
     Init_I2C1();
     
-    I2C_res = RDA_set_freq(1040);
+    I2C_res = RDA_set_freq(RADIO_FREQ);
     
     I2C_res = Init_TDA();
 
@@ -56,11 +59,10 @@ int main(void)
 //    
 //    TFT_TIME[44] = ((RTC->DR & 0xF00)   >> 8)  + 0x30;
 //    TFT_TIME[43] = ((RTC->DR & 0x1000)  >> 12) + 0x30;
-    
   
     STATE = AUDIO_OFF;
     TFT_send(pages[STATE], sizeof(pages[STATE]));
-    TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+//    TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
 //    TFT_send(TFT_TIME, sizeof(TFT_TIME));
     
     NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
@@ -134,41 +136,19 @@ void Init_RCC(void)
 void SysTick_Handler(void)
 {
     static uint32_t del = 0;
-    static uint32_t time = 0;
     
     del++;
-    time++;
 
     if (del == (SysTicksClk/2)) // Per = 1s
     {
         del = 0;
-    }
-    
-    if (time == (SysTicksClk*5)) // 10s
-    {
-        time = 0;
-//        if((STATE == MAIN)||(STATE == AUDIO_OFF))
-//        {
-//            TFT_TIME[14] = ((RTC->TR & 0xF00)   >> 8)  + 0x30;
-//            TFT_TIME[13] = ((RTC->TR & 0x7000)  >> 12) + 0x30;
-//            
-//            TFT_TIME[11] = ((RTC->TR & 0xF0000) >> 16) + 0x30;
-//            TFT_TIME[10] = ((RTC->TR & 0x700000)>> 20) + 0x30;
-//            
-//            TFT_TIME[29] =  (RTC->DR & 0xF)            + 0x30;
-//            TFT_TIME[28] = ((RTC->DR & 0x30)    >> 4)  + 0x30;
-//            
-//            TFT_TIME[44] = ((RTC->DR & 0xF00)   >> 8)  + 0x30;
-//            TFT_TIME[43] = ((RTC->DR & 0x1000)  >> 12) + 0x30;
-//            
-//            TFT_send(TFT_TIME, sizeof(TFT_TIME));
-//        }
     }
 }
 
 void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 {
     TIM14->SR = 0;
+	
     static uint8_t hour;
     static uint8_t min;
     static uint8_t mon;
@@ -176,9 +156,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     static uint8_t week_day;
     static uint8_t year;
 	
+		static uint8_t delay_send = 100;
+	
+		delay_send++;
+	
     uint8_t i2c_sel_buff[2];
 		
-    if(GPIOC->IDR & GPIO_PIN_5)
+    if(GPIOC->IDR & GPIO_PIN_5) // source select & OFF audio
     {
         OFF_counter++;
         if((OFF_counter >= 20)&&(STATE == MAIN))
@@ -210,6 +194,20 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
                 
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+							
+							  switch (INPUT_SEL)
+								{
+									case FM:{
+														main_text[0][10] =  RADIO_FREQ/1000 + 0x30;
+														main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+														main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+														main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+														while(DMA1_Stream4->NDTR != 0){};
+														TFT_send(main_text[0], sizeof(main_text[0]));
+													break;}
+								
+								
+								};
             }
             if(STATE == AUDIO_OFF)
             {
@@ -223,12 +221,75 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
                 
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+								switch (INPUT_SEL)
+								{
+									case FM:{
+														main_text[0][10] =  RADIO_FREQ/1000 + 0x30;
+														main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+														main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+														main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+														while(DMA1_Stream4->NDTR != 0){};
+														TFT_send(main_text[0], sizeof(main_text[0]));
+													break;}
+								
+								
+								};
             }
         }
         OFF_counter = 0;
     }
     
-    if(GPIOC->IDR & GPIO_PIN_8) // Clock button for increase value
+    
+		if(GPIOC->IDR & GPIO_PIN_4) // increase
+		{
+			if(STATE == MAIN)
+			{				
+				switch (INPUT_SEL)
+				{
+					case FM:{
+										RADIO_FREQ++;
+										if(RADIO_FREQ >= 1080)RADIO_FREQ = 850;
+										RDA_set_freq(RADIO_FREQ);
+										
+										main_text[0][10] =  RADIO_FREQ/1000 + 0x30;
+										main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+										main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+										main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+										while(DMA1_Stream4->NDTR != 0){};
+										TFT_send(main_text[0], sizeof(main_text[0]));	
+										break;}
+				
+				
+				}
+			}
+		}
+
+
+		if(GPIOC->IDR & GPIO_PIN_2) // increase
+		{
+			if(STATE == MAIN)
+			{				
+				switch (INPUT_SEL)
+				{
+					case FM:{
+										RADIO_FREQ--;
+										if(RADIO_FREQ <= 850)RADIO_FREQ = 1080;
+										RDA_set_freq(RADIO_FREQ);
+										
+										main_text[0][10] = RADIO_FREQ/1000 + 0x30;
+										main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+										main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+										main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+										while(DMA1_Stream4->NDTR != 0){};
+										TFT_send(main_text[0], sizeof(main_text[0]));	
+										break;}
+				
+				
+				}
+			}
+		}
+		
+		if(GPIOC->IDR & GPIO_PIN_8) // Clock button for increase value
     {
         if(STATE == SET_TIME)
         {
@@ -293,16 +354,16 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                                     week_day++;
                                     if(week_day >= 8) week_day = 1;
 
-                                    set_time_txt[84] = day_of_week[week_day][0];
-                                    set_time_txt[85] = day_of_week[week_day][1];
-                                    set_time_txt[86] = day_of_week[week_day][2];
+                                    set_time_txt[84] = day_of_week[week_day - 1][0];
+                                    set_time_txt[85] = day_of_week[week_day - 1][1];
+                                    set_time_txt[86] = day_of_week[week_day - 1][2];
 
                                     TFT_send(&set_time_txt[75], 16);
                     
                                     break;
                                    }
                 case SET_SET:{
-                                    STATE = MAIN;
+                                    STATE = prev_state;
                                     RCC->APB1ENR |= RCC_APB1ENR_PWREN;
                                     PWR->CR |= PWR_CR_DBP;
                                     RTC->WPR = 0xCA;
@@ -325,21 +386,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                                     PWR->CR &= ~PWR_CR_DBP;
                                     
                                     TFT_send(pages[STATE], sizeof(pages[STATE]));
-                                    
-//                                    TFT_TIME[14] = ((RTC->TR & 0xF00)   >> 8)  + 0x30;
-//                                    TFT_TIME[13] = ((RTC->TR & 0x7000)  >> 12) + 0x30;
-//                                    
-//                                    TFT_TIME[11] = ((RTC->TR & 0xF0000) >> 16) + 0x30;
-//                                    TFT_TIME[10] = ((RTC->TR & 0x700000)>> 20) + 0x30;
-//                                    
-//                                    TFT_TIME[29] =  (RTC->DR & 0xF)            + 0x30;
-//                                    TFT_TIME[28] = ((RTC->DR & 0x30)    >> 4)  + 0x30;
-//                                    
-//                                    TFT_TIME[44] = ((RTC->DR & 0xF00)   >> 8)  + 0x30;
-//                                    TFT_TIME[43] = ((RTC->DR & 0x1000)  >> 12) + 0x30;
-//                                    
-//                                    TFT_send(TFT_TIME, sizeof(TFT_TIME));
-                                    
+																		delay_send = 100;
                                     break;
                                    }
                 default:break;
@@ -351,7 +398,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     {
         switch(STATE)
         {
+						case AUDIO_OFF:
             case MAIN:{
+												prev_state = STATE;
                         STATE = SET_TIME;
                         TFT_send(pages[STATE], sizeof(pages[STATE]));
                         
@@ -361,13 +410,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
                         TFT_send(set_time_tft[SET_TIME_STATE], sizeof(set_time_tft[SET_TIME_STATE]));
                             
-                        hour = ((RTC->TR & 0x700000) >> 20)*10 + ((RTC->TR & 0xF0000) >> 16);
-                        min  = ((RTC->TR & 0x7000)   >> 12)*10 + ((RTC->TR & 0xF00)   >> 8);
-                        day  = ((RTC->DR & 0x30)     >>  4)*10 +  (RTC->DR & 0xF);
-                        mon  = ((RTC->DR & 0x1000)   >> 12)*10 + ((RTC->DR & 0xF00)   >> 8);
-                        year = ((RTC->DR & 0xF00000) >> 20)*10 + ((RTC->DR & 0xF0000) >> 16);
-                        week_day = RTC->DR & 0xE000 >> 13;
-                            
+												hour = ((RTC->TR & RTC_TR_HT_Msk) >> RTC_TR_HT_Pos)*10 + ((RTC->TR & RTC_TR_HU_Msk) >> RTC_TR_HU_Pos);
+                        min  = ((RTC->TR & RTC_TR_MNT_Msk)>> RTC_TR_MNT_Pos)*10+ ((RTC->TR & RTC_TR_MNU_Msk)>> RTC_TR_MNU_Pos);
+                        day  = ((RTC->DR & RTC_DR_DT_Msk) >> RTC_DR_DT_Pos)*10 +  (RTC->DR & RTC_DR_DU_Msk);
+                        mon  = ((RTC->DR & RTC_DR_MT_Msk) >> RTC_DR_MT_Pos)*10 + ((RTC->DR & RTC_DR_MU_Msk) >> RTC_DR_MU_Pos);
+                        year = ((RTC->DR & RTC_DR_YT_Msk) >> RTC_DR_YT_Pos)*10 + ((RTC->DR & RTC_DR_YU_Msk) >> RTC_DR_YU_Pos);
+                        week_day = (RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos;
+														
                         set_time_txt[9]  = hour/10 + 0x30;
                         set_time_txt[10] = (hour - ((hour/10)*10)) + 0x30;
                         
@@ -383,9 +432,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         set_time_txt[69] = year/10 + 0x30;
                         set_time_txt[70] = (year - ((year/10)*10)) + 0x30;
                         
-                        set_time_txt[84] = day_of_week[week_day][0];
-                        set_time_txt[85] = day_of_week[week_day][1];
-                        set_time_txt[86] = day_of_week[week_day][2];                        
+                        set_time_txt[84] = day_of_week[week_day - 1][0];
+                        set_time_txt[85] = day_of_week[week_day - 1][1];
+                        set_time_txt[86] = day_of_week[week_day - 1][2];                        
                             
                         TFT_send(set_time_txt, sizeof(set_time_txt));
 
@@ -402,26 +451,27 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
         }
     }
 
-    if((STATE == MAIN)||(STATE == AUDIO_OFF))
+    if(((STATE == MAIN)||(STATE == AUDIO_OFF))&&(delay_send >= 100))
     {
-        TFT_TIME[14] = ((RTC->TR & 0xF00)   >> 8)  + 0x30; // minute
-        TFT_TIME[13] = ((RTC->TR & 0x7000)  >> 12) + 0x30;
+				delay_send = 0;
+        TFT_TIME[14] = ((RTC->TR & RTC_TR_MNU_Msk)>> RTC_TR_MNU_Pos)+ 0x30; // minute
+        TFT_TIME[13] = ((RTC->TR & RTC_TR_MNT_Msk)>> RTC_TR_MNT_Pos)+ 0x30;
         
-        TFT_TIME[11] = ((RTC->TR & 0xF0000) >> 16) + 0x30; // time
-        TFT_TIME[10] = ((RTC->TR & 0x700000)>> 20) + 0x30;
+        TFT_TIME[11] = ((RTC->TR & RTC_TR_HU_Msk) >> RTC_TR_HU_Pos) + 0x30; // hour
+        TFT_TIME[10] = ((RTC->TR & RTC_TR_HT_Msk) >> RTC_TR_HT_Pos) + 0x30;
         
-        TFT_TIME[30] =  (RTC->DR & 0xF)            + 0x30; // day
-        TFT_TIME[29] = ((RTC->DR & 0x30)    >> 4)  + 0x30;
+        TFT_TIME[30] =  (RTC->DR & RTC_DR_DU_Msk)        						+ 0x30; // day
+        TFT_TIME[29] = ((RTC->DR & RTC_DR_DT_Msk) >> RTC_DR_DT_Pos) + 0x30;
         
-        TFT_TIME[33] = ((RTC->DR & 0xF00)   >> 8)  + 0x30; // month
-        TFT_TIME[32] = ((RTC->DR & 0x1000)  >> 12) + 0x30;
+        TFT_TIME[33] = ((RTC->DR & RTC_DR_MU_Msk) >> RTC_DR_MU_Pos) + 0x30; // month
+        TFT_TIME[32] = ((RTC->DR & RTC_DR_MT_Msk) >> RTC_DR_MT_Pos) + 0x30;
         
-        TFT_TIME[36] = ((RTC->DR & 0xF0000) >> 16) + 0x30; // year
-        TFT_TIME[35] = ((RTC->DR & 0xF00000)>> 20) + 0x30;
+        TFT_TIME[36] = ((RTC->DR & RTC_DR_YU_Msk) >> RTC_DR_YU_Pos) + 0x30; // year
+        TFT_TIME[35] = ((RTC->DR & RTC_DR_YT_Msk) >> RTC_DR_YT_Pos) + 0x30;
         
-        TFT_TIME[38] = day_of_week[((RTC->DR & 0xE000)   >> 13) - 1][0]; // day of week
-        TFT_TIME[39] = day_of_week[((RTC->DR & 0xE000)   >> 13) - 1][1];
-        TFT_TIME[40] = day_of_week[((RTC->DR & 0xE000)   >> 13) - 1][2];
+        TFT_TIME[38] = day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1][0]; // day of week
+        TFT_TIME[39] = day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1][1];
+        TFT_TIME[40] = day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1][2];
         
         TFT_send(TFT_TIME, sizeof(TFT_TIME));
     }

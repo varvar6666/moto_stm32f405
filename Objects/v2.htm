@@ -3,11 +3,11 @@
 <title>Static Call Graph - [.\Objects\v2.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\v2.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060422: Last Updated: Thu Feb 08 19:33:00 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Fri Feb 09 18:50:17 2018
 <BR><P>
 <H3>Maximum Stack Usage =         36 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
-__rt_entry_main &rArr; main &rArr; Init_TDA &rArr; I2C1_Send
+TIM8_TRG_COM_TIM14_IRQHandler &rArr; RDA_set_freq &rArr; I2C1_Send
 <P>
 <H3>
 Functions with no stack information
@@ -649,9 +649,10 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C1_Send
 </UL>
 <BR>[Called By]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIM8_TRG_COM_TIM14_IRQHandler
 </UL>
 
-<P><STRONG><a name="[b]"></a>SysTick_Handler</STRONG> (Thumb, 58 bytes, Stack size 0 bytes, main.o(i.SysTick_Handler))
+<P><STRONG><a name="[b]"></a>SysTick_Handler</STRONG> (Thumb, 30 bytes, Stack size 0 bytes, main.o(i.SysTick_Handler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f405xx.o(RESET)
 </UL>
 <P><STRONG><a name="[5a]"></a>SystemInit</STRONG> (Thumb, 82 bytes, Stack size 0 bytes, system_stm32f4xx.o(i.SystemInit))
@@ -662,15 +663,16 @@ Global Symbols
 <LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIM8_TRG_COM_TIM14_IRQHandler
 </UL>
 
-<P><STRONG><a name="[39]"></a>TIM8_TRG_COM_TIM14_IRQHandler</STRONG> (Thumb, 2092 bytes, Stack size 8 bytes, main.o(i.TIM8_TRG_COM_TIM14_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 20<LI>Call Chain = TIM8_TRG_COM_TIM14_IRQHandler &rArr; I2C1_Send
+<P><STRONG><a name="[39]"></a>TIM8_TRG_COM_TIM14_IRQHandler</STRONG> (Thumb, 2964 bytes, Stack size 8 bytes, main.o(i.TIM8_TRG_COM_TIM14_IRQHandler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = TIM8_TRG_COM_TIM14_IRQHandler &rArr; RDA_set_freq &rArr; I2C1_Send
 </UL>
 <BR>[Calls]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TFT_send
+<LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;RDA_set_freq
 <LI><a href="#[71]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;I2C1_Send
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f405xx.o(RESET)
 </UL>
-<P><STRONG><a name="[67]"></a>main</STRONG> (Thumb, 216 bytes, Stack size 0 bytes, main.o(i.main))
+<P><STRONG><a name="[67]"></a>main</STRONG> (Thumb, 196 bytes, Stack size 0 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = main &rArr; Init_TDA &rArr; I2C1_Send
 </UL>
 <BR>[Calls]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TFT_send
