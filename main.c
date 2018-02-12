@@ -9,63 +9,75 @@ uint8_t OFF_counter = 0;
 
 uint8_t I2C_res;
 
-uint16_t RADIO_FREQ = 1040;
+uint16_t RADIO_FREQ = 0;
 
 int main(void)
 {
-    /*-- Delay for TFT start --*/
-    for(uint32_t delay = 0;delay < 1000000;delay++) 
-    {};    
         
     /*-- Init main clock --*/
     Init_RCC();
     /*-- Init main clock --*/
     Init_GPIO();
+ 
+		FLASH->KEYR = 0x45670123;
+		FLASH->KEYR = 0xCDEF89AB;	
+	
     Init_TFT();
+		TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
+   
+  	/*-- Delay for TFT start --*/
+    for(uint32_t delay = 0;delay < 10000000;delay++) 
+    {};    
 			
-    while(DMA1_Stream4->NDTR != 0){};
     loading_txt[8] = '2';
     loading_txt[9] = '5';
     TFT_send(loading_txt, sizeof(loading_txt));
     
     Init_RTC();
 
-    while(DMA1_Stream4->NDTR != 0){};
     loading_txt[8] = '5';
     loading_txt[9] = '0';
     TFT_send(loading_txt, sizeof(loading_txt));
     
     Init_KEYs_TIM();
     
-		while(DMA1_Stream4->NDTR != 0){};
     loading_txt[8] = '7';
     loading_txt[9] = '5';
     TFT_send(loading_txt, sizeof(loading_txt));
     
     Init_I2C1();
     
-    I2C_res = RDA_set_freq(RADIO_FREQ);
+    I2C_res = RDA_set_freq(RADIO_FREQ); // Init FM
     
     I2C_res = Init_TDA();
-
-//    TFT_TIME[14] = ((RTC->TR & 0xF00)   >> 8)  + 0x30;
-//    TFT_TIME[13] = ((RTC->TR & 0x7000)  >> 12) + 0x30;
-//    
-//    TFT_TIME[11] = ((RTC->TR & 0xF0000) >> 16) + 0x30;
-//    TFT_TIME[10] = ((RTC->TR & 0x700000)>> 20) + 0x30;
-//    
-//    TFT_TIME[29] =  (RTC->DR & 0xF)            + 0x30;
-//    TFT_TIME[28] = ((RTC->DR & 0x30)    >> 4)  + 0x30;
-//    
-//    TFT_TIME[44] = ((RTC->DR & 0xF00)   >> 8)  + 0x30;
-//    TFT_TIME[43] = ((RTC->DR & 0x1000)  >> 12) + 0x30;
-  
-    STATE = AUDIO_OFF;
+		
+		
+    //STATE = AUDIO_OFF;
+		STATE = (0xFF000000 & flash_read(MEM_ADDRESS)) >> 24;
+		INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
+		RADIO_FREQ = (0xFFFF0000 & flash_read(RADIO_FREQ_ADR)) >> 16;
     TFT_send(pages[STATE], sizeof(pages[STATE]));
-//    TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
-//    TFT_send(TFT_TIME, sizeof(TFT_TIME));
-    
+		
+		if(STATE == MAIN)
+		{
+				TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+				switch (INPUT_SEL)
+				{
+					case FM:{
+										main_text[0][10] =  RADIO_FREQ/1000 + 0x30;
+										main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+										main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+										main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+										TFT_send(main_text[0], sizeof(main_text[0]));
+									break;}
+				
+				
+				};
+		}
+
     NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
+			
+		
     while(1)
     {
     
@@ -83,7 +95,7 @@ void Init_RCC(void)
 //        HSEStatus = RCC->CR & RCC_CR_HSERDY;
 //        StartUpCounter++;
 //    }    
-//    while((HSEStatus == 0) && (StartUpCounter != ((uint32_t)100U)));
+//    while((HSEStatus == 0) && (StartUpCounter != ((uint32_t)1000U)));
     
     if( (RCC->CR & RCC_CR_HSIRDY) != RESET)
     {
@@ -174,8 +186,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
             I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
             
             STATE = AUDIO_OFF;
+						
+						flash_write_newdata();
             
             TFT_send(pages[STATE], sizeof(pages[STATE]));
+						delay_send = 100;
             /* ADD stop players  */
         }
     }
@@ -188,6 +203,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 INPUT_SEL++;
 
                 if(INPUT_SEL>AUX) INPUT_SEL = FM;
+							
+								flash_write_newdata();
                 
                 i2c_sel_buff[0] = TDA_MAIN_SOURCE;
                 i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
@@ -202,7 +219,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 														main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
 														main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
 														main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-														while(DMA1_Stream4->NDTR != 0){};
+														
 														TFT_send(main_text[0], sizeof(main_text[0]));
 													break;}
 								
@@ -212,7 +229,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
             if(STATE == AUDIO_OFF)
             {
                 STATE = MAIN;
-                
+            
+								flash_write_newdata();
+            
                 TFT_send(pages[STATE], sizeof(pages[STATE]));
 
                 i2c_sel_buff[0] = TDA_MAIN_SOURCE;
@@ -228,7 +247,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 														main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
 														main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
 														main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-														while(DMA1_Stream4->NDTR != 0){};
+														
 														TFT_send(main_text[0], sizeof(main_text[0]));
 													break;}
 								
@@ -251,11 +270,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 										if(RADIO_FREQ >= 1080)RADIO_FREQ = 850;
 										RDA_set_freq(RADIO_FREQ);
 										
+										flash_write_newdata();
+						
 										main_text[0][10] =  RADIO_FREQ/1000 + 0x30;
 										main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
 										main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
 										main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-										while(DMA1_Stream4->NDTR != 0){};
+										
 										TFT_send(main_text[0], sizeof(main_text[0]));	
 										break;}
 				
@@ -276,11 +297,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 										if(RADIO_FREQ <= 850)RADIO_FREQ = 1080;
 										RDA_set_freq(RADIO_FREQ);
 										
+										flash_write_newdata();
+										
 										main_text[0][10] = RADIO_FREQ/1000 + 0x30;
 										main_text[0][11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
 										main_text[0][12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
 										main_text[0][14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-										while(DMA1_Stream4->NDTR != 0){};
+										
 										TFT_send(main_text[0], sizeof(main_text[0]));	
 										break;}
 				
@@ -405,8 +428,6 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         TFT_send(pages[STATE], sizeof(pages[STATE]));
                         
                         SET_TIME_STATE = SET_TIME_HOUR;
-
-                        while(DMA1_Stream4->NDTR != 0){};
 
                         TFT_send(set_time_tft[SET_TIME_STATE], sizeof(set_time_tft[SET_TIME_STATE]));
                             
@@ -553,9 +574,7 @@ void Init_TFT(void)
 
 void TFT_send(uint8_t *buff, uint8_t size)
 {
-    while(DMA1_Stream4->NDTR != 0){};
-		
-//		DMA1->HIFCR |= DMA_HIFCR_CTCIF4 | DMA_HIFCR_CHTIF4 | DMA_HIFCR_CFEIF4;
+    //while(DMA1_Stream4->NDTR != 0){};
 			
     DMA1_Stream4->M0AR = (uint32_t) buff;
     DMA1_Stream4->NDTR = size;
@@ -564,6 +583,8 @@ void TFT_send(uint8_t *buff, uint8_t size)
                   DMA_HIFCR_CFEIF4 |
                   DMA_HIFCR_CTEIF4;
     DMA1_Stream4->CR |= DMA_SxCR_EN;
+	
+	  while(DMA1_Stream4->NDTR != 0){};
 }
 
 void Init_KEYs_TIM(void)
@@ -679,4 +700,51 @@ uint8_t Init_TDA(void)
     init_buff[18]= 0x00; //test mode off
     
     return I2C1_Send(TDA7419_ADRESS, init_buff, sizeof(init_buff));
+}
+
+uint32_t flash_read(uint32_t address)
+{
+	return (*(__IO uint32_t*) address);
+}
+
+//Функция возврщает true когда можно стирать или писать память.
+uint8_t flash_ready(void)
+{
+	return !(FLASH->SR & FLASH_SR_BSY);
+}
+
+//Функция стирает одну страницу. В качестве адреса можно использовать любой
+//принадлежащий диапазону адресов той странице которую нужно очистить.
+void flash_erase_sector(uint8_t sector) 
+{
+		FLASH->CR |= FLASH_CR_SER; //Устанавливаем бит стирания одной страницы
+		FLASH->CR |= sector << FLASH_CR_SNB_Pos; // Задаем её адрес
+		FLASH->CR |= FLASH_CR_STRT; // Запускаем стирание
+		
+		while(!flash_ready())//Ждем пока страница сотрется.
+		
+		FLASH->CR&= ~(FLASH_CR_SER); //Сбрасываем бит обратно
+}
+
+void flash_write(uint32_t address, uint32_t data)
+{
+		FLASH->CR |= FLASH_CR_PG; //Разрешаем программирование флеша
+		
+		FLASH->CR |= FLASH_CR_PSIZE_1;
+		
+		while(!flash_ready()); //Ожидаем готовности флеша к записи
+		
+		*(__IO uint32_t*)address = (uint32_t)data; //Пишем младшие 2 бата
+		
+		while(!flash_ready());
+		
+		FLASH->CR &= ~(FLASH_CR_PG); //Запрещаем программирование флеша
+}
+
+void flash_write_newdata(void)
+{
+	flash_erase_sector(3); //start from 0x0800C000
+	flash_write(MEM_ADDRESS, ((STATE << 24 ) | (INPUT_SEL << 16)));
+	flash_write(RADIO_FREQ_ADR, RADIO_FREQ << 16);
+
 }

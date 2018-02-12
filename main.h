@@ -15,6 +15,9 @@
 #define SysTicksClk 10000
 #define SysTicks    F_CPU/SysTicksClk
 
+#define	MEM_ADDRESS 		0x0800C000
+#define RADIO_FREQ_ADR	0x0800C004
+
 enum PINs
 {
     PIN0=0, PIN1,   PIN2,   PIN3,
@@ -61,6 +64,7 @@ const uint8_t TDA_inputs[4] = {0x82, 0x84, 0x81, 0x83};
 
 /*--------------------------------------------------------------------------------*/
 //TFT commands
+uint8_t TFT_reset[7] = {'r','e','s','t',255,255,255};
 
 uint8_t loading_txt[13] = {'l','o','d','.','v','a','l','=','0','0',255,255,255};
 
@@ -107,6 +111,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void);
                                 
 void Init_RCC(void);
 void SysTick_Handler(void);
+
+uint32_t flash_read(uint32_t address);
+uint8_t flash_ready(void);
+void flash_erase_sector(uint8_t sector);
+void flash_write(uint32_t address, uint32_t data);
+void flash_write_newdata(void);
+	
 void Init_GPIO(void);
 void Init_RTC(void);
 void Init_TFT(void);
@@ -118,3 +129,4 @@ uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size);
 uint8_t RDA_set_freq(uint16_t freq);
                             
 uint8_t Init_TDA(void);
+	
