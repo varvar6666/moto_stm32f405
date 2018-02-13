@@ -104,10 +104,28 @@ uint8_t day_of_week[7][3] = {"MON",
                              "SAT",
                              "SUN"};
 
-uint8_t main_text[1][22] = {'t','e','x','t','.','t','x','t','=','"','0','0','0','.','0',' ','F','M','"',255,255,255};
+uint8_t main_FM_text[22] = 		 {'t','e','x','t','.','t','x','t','=','"','0','0','0','.','0',' ','F','M','"',255,255,255};
+uint8_t main_BT_text[4][22] = {{'t','e','x','t','.','t','x','t','=','"','N','O',' ','C','O','N','N',' ','"',255,255,255},
+															 {'t','e','x','t','.','t','x','t','=','"','C','O','N','N','E','C','T',' ','"',255,255,255},
+															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','L','A','Y',' ',' ','"',255,255,255},
+															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','A','U','S','E',' ','"',255,255,255}};
 /*--------------------------------------------------------------------------------*/
-
+// BT
+enum BT_querys
+{
+    BT_STATUS=0,
+    BT_PLAY_PAUSE,
+    BT_FORWARD,
+    BT_BACKWARD,
+		BT_DISC,
+		BT_RESET
+};
+																 
+/*--------------------------------------------------------------------------------*/
 void TIM8_TRG_COM_TIM14_IRQHandler(void);
+void DMA1_Stream1_IRQHandler(void);
+void DMA1_Stream3_IRQHandler(void);
+void USART3_IRQHandler(void);	
                                 
 void Init_RCC(void);
 void SysTick_Handler(void);
@@ -123,7 +141,10 @@ void Init_RTC(void);
 void Init_TFT(void);
 void TFT_send(uint8_t *buff, uint8_t size);
 void Init_KEYs_TIM(void);
-                            
+
+void Init_BT(void);
+void BT_send(uint8_t query);
+
 void Init_I2C1(void);
 uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size);
 uint8_t RDA_set_freq(uint16_t freq);
