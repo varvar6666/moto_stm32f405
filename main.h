@@ -5,6 +5,7 @@
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_adc.h"
 #include "stm32f4xx_hal_tim.h"
+#include "string.h"
 
 #define F_CPU       168000000UL
 #define AHB1        F_CPU
@@ -68,8 +69,9 @@ uint8_t TFT_reset[7] = {'r','e','s','t',255,255,255};
 
 uint8_t loading_txt[13] = {'l','o','d','.','v','a','l','=','0','0',255,255,255};
 
-uint8_t TFT_TIME[45] = {'t','i','m','e','.','t','x','t','=','"',0,0,':',0,0,'"',255,255,255,\
-                        'd','a','t','e','.','t','x','t','=','"',0,0,'.',0,0,'.',0,0,' ','m','o','n','"',255,255,255}; 
+uint8_t TFT_TIME[56] = {'t','i','m','e','.','t','x','t','=','"',0,0,':',0,0,'"',255,255,255,\
+                        'd','a','t','e','.','t','x','t','=','"',' ',' ',0,0,'.',0,0,'.',0,0,' ',\
+												' ',' ',' ','d','a','y','o','f','w','e','e','k','"',255,255,255}; 
 
 uint8_t pages[4][12] = {{'p','a','g','e',' ','l','o','a','d',255,255,255},
                         {'p','a','g','e',' ','a','o','f','f',255,255,255},
@@ -89,28 +91,33 @@ uint8_t set_time_tft[7][24] = {{'s','e','t','.','v','a','l','=','0',255,255,255,
                                {'d','_','d','.','v','a','l','=','0',255,255,255,'d','_','w','.','v','a','l','=','1',255,255,255},
                                {'d','_','w','.','v','a','l','=','0',255,255,255,'s','e','t','.','v','a','l','=','1',255,255,255}};
 
-uint8_t set_time_txt[91] = {'t','_','h','.','t','x','t','=','"','0','0','"',255,255,255,\
+uint8_t set_time_txt[97] = {'t','_','h','.','t','x','t','=','"','0','0','"',255,255,255,\
                             't','_','m','.','t','x','t','=','"','0','0','"',255,255,255,\
                             'd','_','m','.','t','x','t','=','"','0','0','"',255,255,255,\
                             'd','_','d','.','t','x','t','=','"','0','0','"',255,255,255,\
                             'd','_','y','.','t','x','t','=','"','0','0','"',255,255,255,\
-                            'd','_','w','.','t','x','t','=','"','0','0','0','"',255,255,255,};
+                            'd','_','w','.','t','x','t','=','"','0','0','0','0','0','0','0','0','0','"',255,255,255,};
 
-uint8_t day_of_week[7][3] = {"MON",
-                             "TUE",
-                             "WED",
-                             "THU",
-                             "FRI",
-                             "SAT",
-                             "SUN"};
+uint8_t day_of_week[7][9] = {"Monday   ",
+                             "Tuesday  ",
+                             "Wednesday",
+                             "Thursday ",
+                             "Friday   ",
+                             "Saturday ",
+                             "Sunday   "};
 
 uint8_t main_FM_text[22] = 		 {'t','e','x','t','.','t','x','t','=','"','0','0','0','.','0',' ','F','M','"',255,255,255};
 uint8_t main_BT_text[4][22] = {{'t','e','x','t','.','t','x','t','=','"','N','O',' ','C','O','N','N',' ','"',255,255,255},
 															 {'t','e','x','t','.','t','x','t','=','"','C','O','N','N','E','C','T',' ','"',255,255,255},
 															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','L','A','Y',' ',' ','"',255,255,255},
 															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','A','U','S','E',' ','"',255,255,255}};
+uint8_t main_DF_text[2][32] = {{'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','A','U','S','E','"',255,255,255},
+															 {'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','L','A','Y',' ','"',255,255,255}};
+																 
 /*--------------------------------------------------------------------------------*/
 // BT
+#define BT_RX_BUFF_SIZE 20
+
 enum BT_querys
 {
     BT_STATUS=0,
@@ -120,11 +127,52 @@ enum BT_querys
 		BT_DISC,
 		BT_RESET
 };
-																 
+uint8_t bt_tx_query[6][7] = {{'A','T','#','M','V',13,10},
+														 {'A','T','#','M','A',13,10},
+														 {'A','T','#','M','D',13,10},
+														 {'A','T','#','M','E',13,10},
+														 {'A','T','#','M','J',13,10},
+														 {'A','T','#','C','Z',13,10}};											 
+/*--------------------------------------------------------------------------------*/
+//DF Serial Control CMD
+#define DF_NEXT    0x01
+#define DF_PREW    0x02
+#define DF_TRACK   0x03
+#define DF_INC_VOL 0x04
+#define DF_DEC_VOL 0x05
+#define DF_SET_VOL 0x06
+#define DF_EQ      0x07
+#define DF_PB_MODE 0x08
+#define DF_PB_SORC 0x09
+#define DF_STBY    0x0A
+#define DF_NORM    0x0B
+#define DF_RES     0x0C
+#define DF_PLAY    0x0D
+#define DF_PAUSE   0x0E
+#define DF_FOLDER  0x0F
+#define DF_VOL_ADJ 0x10
+#define DF_RP_PL   0x11
+
+//DF Serial Query Cmd
+#define DF_Q_NUM_FILES	0x47
+#define DF_Q_CUR_FIL		0x4C
+#define DF_Q_CUR_STAT		0x42
+
+//Play Mode
+#define DF_REP_ALL 0
+#define DF_REP_FLD 0
+#define DF_REP_SIN 0
+#define DF_RANDOM  0
+
+//Play Source
+#define DF_USB     1
+
+uint8_t DF_data[10] = {0x7E, 0xFF, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF};
+
 /*--------------------------------------------------------------------------------*/
 void TIM8_TRG_COM_TIM14_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
-void DMA1_Stream3_IRQHandler(void);
+void DMA1_Stream0_IRQHandler(void);
 void USART3_IRQHandler(void);	
                                 
 void Init_RCC(void);
@@ -144,6 +192,9 @@ void Init_KEYs_TIM(void);
 
 void Init_BT(void);
 void BT_send(uint8_t query);
+
+void Init_DF(void);
+void DF_send(uint8_t CMD, uint8_t PAR);
 
 void Init_I2C1(void);
 uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size);
