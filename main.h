@@ -17,7 +17,9 @@
 #define SysTicks    F_CPU/SysTicksClk
 
 #define	MEM_ADDRESS 		0x0800C000
-#define RADIO_FREQ_ADR	0x0800C004
+#define RADIO_FREQ_ADR	MEM_ADDRESS + 0x4
+
+
 
 enum PINs
 {
@@ -56,11 +58,14 @@ enum INPUTs
 
 /*--------------------------------------------------------------------------------*/
 //TDA Defs
-#define TDA7419_ADRESS		0x88
+#define TDA7419_ADDRESS		0x88
 #define TDA_MAIN_SOURCE		0x00
 #define TDA_SOURCE_MUTE		0x07
 
+#define TDA_VOLUME				0x03
+
 const uint8_t TDA_inputs[4] = {0x82, 0x84, 0x81, 0x83};
+
 
 
 /*--------------------------------------------------------------------------------*/
@@ -111,8 +116,16 @@ uint8_t main_BT_text[4][22] = {{'t','e','x','t','.','t','x','t','=','"','N','O',
 															 {'t','e','x','t','.','t','x','t','=','"','C','O','N','N','E','C','T',' ','"',255,255,255},
 															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','L','A','Y',' ',' ','"',255,255,255},
 															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','A','U','S','E',' ','"',255,255,255}};
-uint8_t main_DF_text[2][32] = {{'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','A','U','S','E','"',255,255,255},
-															 {'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','L','A','Y',' ','"',255,255,255}};
+uint8_t main_DF_text[3][32] = {{'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','S','T','O','P',' ','"',255,255,255},
+															 {'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','L','A','Y',' ','"',255,255,255},
+															 {'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','A','U','S','E','"',255,255,255}};
+uint8_t main_DF_text_no[21] =  {'t','e','x','t','.','t','x','t','=','"','N','O',' ',' ','U','S','B','"',255,255,255};
+
+uint8_t main_AUX_text[17] =  {'t','e','x','t','.','t','x','t','=','"','A','U','X','"',255,255,255};
+	
+uint8_t main_VOL_text[18] = {'v','o','l','.','t','x','t','=','"','-','7','9','d','B','"',255,255,255};
+	
+uint8_t ADC_text[25] 			= {'A','D','C','.','t','x','t','=','"','0','0','.','0','V',' ',' ','0','0','.','0','V','"',255,255,255};
 																 
 /*--------------------------------------------------------------------------------*/
 // BT
@@ -151,24 +164,40 @@ uint8_t bt_tx_query[6][7] = {{'A','T','#','M','V',13,10},
 #define DF_PAUSE   0x0E
 #define DF_FOLDER  0x0F
 #define DF_VOL_ADJ 0x10
-#define DF_RP_PL   0x11
+														 
+#define DF_LOOP_PLAY   0x11
+#define DF_RND_PLAY    0x18
+//#define DF_PAUSE   		 0x1A
+
 
 //DF Serial Query Cmd
 #define DF_Q_NUM_FILES	0x47
 #define DF_Q_CUR_FIL		0x4C
 #define DF_Q_CUR_STAT		0x42
+#define DF_Q_CUR_PBM		0x45
 
 //Play Mode
 #define DF_REP_ALL 0
-#define DF_REP_FLD 0
-#define DF_REP_SIN 0
-#define DF_RANDOM  0
+#define DF_REP_FLD 1
+#define DF_REP_SIN 2
+#define DF_RANDOM  3
 
 //Play Source
 #define DF_USB     1
 
+enum DF_status
+{
+    DF_ST_STOP=0,
+    DF_ST_PLAY,
+    DF_ST_PAUSE,
+		DF_ST_NO_USB
+};
+
 uint8_t DF_data[10] = {0x7E, 0xFF, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF};
 
+/*--------------------------------------------------------------------------------*/
+//ADC
+#define ADC_BUF_NUM 2
 /*--------------------------------------------------------------------------------*/
 void TIM8_TRG_COM_TIM14_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
@@ -201,4 +230,6 @@ uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size);
 uint8_t RDA_set_freq(uint16_t freq);
                             
 uint8_t Init_TDA(void);
+
+void Init_ADC(void);
 	

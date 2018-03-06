@@ -14,8 +14,12 @@ uint16_t RADIO_FREQ = 0;
 uint8_t BT_connected = 0;
 uint8_t bt_rx_buff[BT_RX_BUFF_SIZE];
 
-uint8_t DF_play = 0;
+uint8_t DF_play = DF_ST_NO_USB;
 uint8_t df_rx_buff[10];
+
+int8_t VOLUME = 0;
+
+uint16_t ADC_Buff[ADC_BUF_NUM];
 
 int main(void)
 {
@@ -27,6 +31,8 @@ int main(void)
  
 		FLASH->KEYR = 0x45670123;
 		FLASH->KEYR = 0xCDEF89AB;	
+	
+		Init_ADC();
 	
     Init_TFT();
 		TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
@@ -57,21 +63,17 @@ int main(void)
 		
 		Init_DF();
 //		DF_send(DF_RES, 0);
-//		for(uint32_t delay = 0;delay < 10000000;delay++){};
 		DF_send(DF_PB_SORC, DF_USB);
-		for(uint32_t delay = 0;delay < 1000000;delay++){};
 		DF_send(DF_SET_VOL,30);
-		for(uint32_t delay = 0;delay < 1000000;delay++){};
-		DF_send(DF_Q_CUR_STAT, 0);
-		for(uint32_t delay = 0;delay < 1000000;delay++){};
 		DF_send(DF_Q_NUM_FILES, 0);
-		
 		
     //STATE = AUDIO_OFF;
 		STATE = (0xFF000000 & flash_read(MEM_ADDRESS)) >> 24;
 		INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
+		VOLUME = (0xFF00 & flash_read(MEM_ADDRESS)) >> 8;
 		RADIO_FREQ = (0xFFFF0000 & flash_read(RADIO_FREQ_ADR)) >> 16;
-    TFT_send(pages[STATE], sizeof(pages[STATE]));
+
+		TFT_send(pages[STATE], sizeof(pages[STATE]));
 
 		I2C_res = Init_TDA();
 		
@@ -80,6 +82,12 @@ int main(void)
 		if(STATE == MAIN)
 		{
 				TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+				main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+				main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+				main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+			
+				TFT_send(main_VOL_text, sizeof(main_VOL_text));
+			
 				switch (INPUT_SEL)
 				{
 					case FM:{
@@ -93,7 +101,12 @@ int main(void)
 					case BT:{
 										BT_send(BT_STATUS);
 									break;}
-				
+					case USB:{
+										DF_send(DF_Q_CUR_STAT, 0);
+									break;}
+					case AUX:{
+										TFT_send(main_AUX_text, sizeof(main_AUX_text));
+									break;}				
 				};
 		}
 
@@ -200,7 +213,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 	
 		delay_send++;
 	
-    uint8_t i2c_sel_buff[2];
+    uint8_t i2c_sel_buff[2] = {TDA_MAIN_SOURCE, TDA_SOURCE_MUTE};
+		uint8_t i2c_vol_buff[2] = {TDA_VOLUME, VOLUME};
+		
+		uint8_t V_IN = (ADC_Buff[0]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
+		uint8_t P_IN = (ADC_Buff[1]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
 		
     if(GPIOC->IDR & GPIO_PIN_5) // source select & OFF audio
     {
@@ -211,7 +228,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
             i2c_sel_buff[0] = TDA_MAIN_SOURCE;
             i2c_sel_buff[1] = TDA_SOURCE_MUTE;
             
-            I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
             
             STATE = AUDIO_OFF;
 						
@@ -238,7 +255,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 
                 i2c_sel_buff[0] = TDA_MAIN_SOURCE;
                 i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
-                I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
                 
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
 							
@@ -257,10 +274,12 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 														TFT_send(main_BT_text[BT_connected], sizeof(main_BT_text[BT_connected]));
 													break;}
 									case USB:{
+														DF_send(DF_Q_NUM_FILES, 0);
 														DF_send(DF_Q_CUR_FIL, 0);
 													break;}
-								
-								
+									case AUX:{
+														TFT_send(main_AUX_text, sizeof(main_AUX_text));
+													break;}
 								};
             }
             if(STATE == AUDIO_OFF)
@@ -274,7 +293,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 i2c_sel_buff[0] = TDA_MAIN_SOURCE;
                 i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
                 
-                I2C_res = I2C1_Send(TDA7419_ADRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
                 
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
 								switch (INPUT_SEL)
@@ -294,8 +313,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 									case USB:{
 														DF_send(DF_Q_CUR_FIL, 0);
 													break;}								
-								
 								};
+
+								main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+								main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+								main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+								
+								TFT_send(main_VOL_text, sizeof(main_VOL_text));
             }
         }
         OFF_counter = 0;
@@ -327,8 +351,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 									break;}
 					case USB:{
 										DF_send(DF_NEXT,0);
-										for(uint32_t delay = 0;delay < 1000000;delay++){};
 										DF_send(DF_Q_CUR_FIL,0);
+										DF_send(DF_Q_CUR_STAT,0);
 									break;}
 				
 				}
@@ -345,18 +369,18 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 										BT_send(BT_PLAY_PAUSE);
 									break;}
 					case USB:{
-										if (DF_play)
+										if (DF_play != DF_ST_NO_USB)
 										{
-											DF_send(DF_PAUSE,0);
-											DF_play = 0;
+											if(DF_play == DF_ST_PLAY)
+												DF_send(DF_PAUSE, 0);
+											if(DF_play == DF_ST_STOP)
+												DF_send(DF_RND_PLAY, 1);
+											if(DF_play == DF_ST_PAUSE)
+												DF_send(DF_PLAY, 0);
+
+											DF_send(DF_Q_CUR_FIL,0);
 										}
-										else
-										{
-											DF_send(DF_PLAY, 0);
-											DF_play = 1;
-										}
-										for(uint32_t delay = 0;delay < 1000000;delay++){};
-										DF_send(DF_Q_CUR_FIL,0);
+										DF_send(DF_Q_CUR_STAT,0);
 									break;}
 
 				};
@@ -388,14 +412,48 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 									break;}
 					case USB:{
 										DF_send(DF_PREW,0);
-										for(uint32_t delay = 0;delay < 1000000;delay++){};
 										DF_send(DF_Q_CUR_FIL,0);
-						
+										DF_send(DF_Q_CUR_STAT,0);
 									break;}
 				}
 			}
 		}
+		
+		if(GPIOB->IDR & GPIO_PIN_5) // increase volume
+		{
+			VOLUME++;
+			if(VOLUME > 15) VOLUME = 15;
+			
+			flash_write_newdata();
 
+			i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+			I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+
+			main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+			main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+			main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+			
+			TFT_send(main_VOL_text, sizeof(main_VOL_text));
+
+		}
+		
+		if(GPIOB->IDR & GPIO_PIN_4) // decrease volume
+		{
+			VOLUME--;
+			if(VOLUME < -79) VOLUME = -79;
+			
+			flash_write_newdata();
+
+			i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+			I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+
+			main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+			main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+			main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+			
+			TFT_send(main_VOL_text, sizeof(main_VOL_text));
+		}
+		
 		if(GPIOC->IDR & GPIO_PIN_1)
 		{
 			DF_send(DF_Q_CUR_STAT,0);
@@ -578,10 +636,20 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 				memcpy(&TFT_TIME[43], &day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1],9);
 
         TFT_send(TFT_TIME, sizeof(TFT_TIME));
+			
+				ADC_text[9]  =  V_IN/100 + 0x30;
+				ADC_text[10] = (V_IN -(V_IN/100)*100)/10 + 0x30;
+				ADC_text[12] = (V_IN -(V_IN/10)*10) + 0x30;
 				
+				ADC_text[16] =  P_IN/100 + 0x30;
+				ADC_text[17] = (P_IN -(P_IN/100)*100)/10 + 0x30;
+				ADC_text[19] = (P_IN -(P_IN/10)*10) + 0x30;
+				
+				TFT_send(ADC_text, sizeof(ADC_text));
+
 				if((INPUT_SEL == BT)&&(BT_connected == 0))
 					BT_send(BT_STATUS);
-				if(INPUT_SEL == USB)
+				if((INPUT_SEL == USB)&&(DF_play == DF_ST_NO_USB))
 					DF_send(DF_Q_CUR_STAT, 0);
     }
 
@@ -686,31 +754,51 @@ void DMA1_Stream0_IRQHandler(void)
 		{
 				main_DF_text[0][19] =  df_rx_buff[6]/100 + 0x30;
 				main_DF_text[0][20] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[0][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;;
+				main_DF_text[0][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
 				main_DF_text[1][19] =  df_rx_buff[6]/100 + 0x30;
 				main_DF_text[1][20] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[1][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;;
+				main_DF_text[1][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
+				main_DF_text[2][19] =  df_rx_buff[6]/100 + 0x30;
+				main_DF_text[2][20] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
+				main_DF_text[2][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;;
 		}
 
 		if(df_rx_buff[3] == DF_Q_CUR_FIL)
 		{
 				main_DF_text[0][15] =  df_rx_buff[6]/100 + 0x30;
 				main_DF_text[0][16] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[0][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;;
+				main_DF_text[0][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
 				main_DF_text[1][15] =  df_rx_buff[6]/100 + 0x30;
 				main_DF_text[1][16] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[1][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;;
+				main_DF_text[1][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
+				main_DF_text[2][15] =  df_rx_buff[6]/100 + 0x30;
+				main_DF_text[2][16] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
+				main_DF_text[2][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;			
 		}
 		
 		if(df_rx_buff[3] == DF_Q_CUR_STAT)
 		{
-			if (df_rx_buff[6] == 1)
-				DF_play = 1;
-			else
-				DF_play = 0;
+			DF_play = df_rx_buff[6];
 		}
+		
+		if((df_rx_buff[3] == 0x40)||(df_rx_buff[3] == 0x3B))
+			DF_play = DF_ST_NO_USB;
 
-		TFT_send(main_DF_text[DF_play], sizeof(main_DF_text[DF_play]));
+		if(df_rx_buff[3] == 0x3A)
+		{
+			DF_play = DF_ST_STOP;
+		}
+		if ((STATE == MAIN) && (INPUT_SEL == USB))
+		{
+			if(DF_play == DF_ST_NO_USB)
+			{
+				TFT_send(main_DF_text_no, sizeof(main_DF_text_no));
+			}
+			else
+			{
+				TFT_send(main_DF_text[DF_play], sizeof(main_DF_text[DF_play]));
+			}
+		}
 	}
 }
 
@@ -780,7 +868,13 @@ void Init_GPIO(void)
 										GPIO_MODE_INPUT << PIN5*2 |
 										GPIO_MODE_INPUT << PIN6*2;
 		
-		
+		//Set GPIOA PIN3,4 GPIOC PIN10 as analog input
+    GPIOA->MODER |=	GPIO_MODE_ANALOG << PIN3*2 | //ADC3 - IN
+                    GPIO_MODE_ANALOG << PIN4*2;  //ADC4 - prevmo
+    GPIOA->OSPEEDR |=	GPIO_SPEED_FREQ_VERY_HIGH << PIN3*2 |
+                      GPIO_SPEED_FREQ_VERY_HIGH << PIN4*2;
+    GPIOA->PUPDR |= GPIO_NOPULL << PIN3*2 |
+                    GPIO_NOPULL << PIN4*2;
     
 }
 
@@ -872,6 +966,9 @@ void BT_send(uint8_t query)
 									DMA_LIFCR_CHTIF3 | 
 									DMA_LIFCR_CFEIF3 |
 									DMA_LIFCR_CTEIF3;	
+	
+		for(uint32_t delay = 0;delay < 100000;delay++){};
+			
 		DMA1_Stream3->M0AR = (uint32_t) bt_tx_query[query];
 		DMA1_Stream3->NDTR = 7;
 		DMA1_Stream3->CR |= DMA_SxCR_EN;
@@ -910,6 +1007,9 @@ void DF_send(uint8_t CMD, uint8_t PAR)
 									DMA_HIFCR_CHTIF7 | 
 									DMA_HIFCR_CFEIF7 |
 									DMA_HIFCR_CTEIF7;
+
+		for(uint32_t delay = 0;delay < 1000000;delay++){};
+			
 		DF_data[3] = CMD;
     DF_data[6] = PAR;
 		
@@ -921,7 +1021,7 @@ void DF_send(uint8_t CMD, uint8_t PAR)
 		DMA1_Stream7->NDTR = 10;
     DMA1_Stream7->CR |= DMA_SxCR_EN;
 		
-		while(DMA1_Stream7->NDTR != 0){};
+		//while(DMA1_Stream7->NDTR != 0){};
 }
 
 void Init_KEYs_TIM(void)
@@ -1017,10 +1117,10 @@ uint8_t Init_TDA(void)
     uint8_t init_buff[19];
     
     init_buff[0] = 0x20; // AI 1 + Subaddres 00000 - Main source sel
-    init_buff[1] = TDA_inputs[INPUT_SEL]; // Main source = SE2(FM), gain = 0;
+		init_buff[1] = (STATE == MAIN) ? TDA_inputs[INPUT_SEL] : TDA_SOURCE_MUTE;// Main source = SE2(FM), gain = 0;
     init_buff[2] = 0x00; // Loudless off
     init_buff[3] = 0xC7; // CLK FM off, SM step 2.56, 0.96, I2C, off
-    init_buff[4] = 0x10; // VOL 0;
+    init_buff[4] = VOLUME; // VOL 0;
     init_buff[5] = 0x90; // Ref out ext + treble off;
     init_buff[6] = 0x50; // mid off
     init_buff[7] = 0x50; // bass off
@@ -1036,7 +1136,7 @@ uint8_t Init_TDA(void)
     init_buff[17]= 0x39; // SA on
     init_buff[18]= 0x00; //test mode off
     
-    return I2C1_Send(TDA7419_ADRESS, init_buff, sizeof(init_buff));
+    return I2C1_Send(TDA7419_ADDRESS, init_buff, sizeof(init_buff));
 }
 
 uint32_t flash_read(uint32_t address)
@@ -1081,7 +1181,46 @@ void flash_write(uint32_t address, uint32_t data)
 void flash_write_newdata(void)
 {
 	flash_erase_sector(3); //start from 0x0800C000
-	flash_write(MEM_ADDRESS, ((STATE << 24 ) | (INPUT_SEL << 16)));
+	flash_write(MEM_ADDRESS, ((STATE << 24 ) | (INPUT_SEL << 16) | (0xFF00 & (VOLUME << 8 ))));
 	flash_write(RADIO_FREQ_ADR, RADIO_FREQ << 16);
 
+}
+
+void Init_ADC(void)
+{
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    ADC1->CR2 = ADC_CR2_ADON | 
+                ADC_CR2_DMA |
+                ADC_CR2_DDS |
+                ADC_CR2_EXTSEL_3 | // Timer 3 TRGO event
+                ADC_CR2_EXTEN_0;
+    ADC1->CR1 = ADC_CR1_SCAN;
+    ADC1->SMPR2 = ADC_SMPR2_SMP3_1 | ADC_SMPR2_SMP3_2 | // clock num for ADC3
+                  ADC_SMPR2_SMP4_1 | ADC_SMPR2_SMP4_2;  // clock num for ADC4
+    ADC1->SQR1 = (ADC_BUF_NUM-1) << ADC_SQR1_L_Pos; // 2 conversation
+    ADC1->SQR3 = 3 << ADC_SQR3_SQ1_Pos |
+                 4 << ADC_SQR3_SQ2_Pos;	
+    //DMA Init
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+    DMA2_Stream0->CR |= DMA_SxCR_CIRC |
+                        DMA_SxCR_MINC | 
+                        DMA_SxCR_MSIZE_0 | 
+                        DMA_SxCR_PSIZE_0 |
+												DMA_SxCR_TCIE;
+    DMA2_Stream0->PAR = (uint32_t) &ADC1->DR;
+    DMA2_Stream0->M0AR = (uint32_t) ADC_Buff;
+    DMA2_Stream0->NDTR = ADC_BUF_NUM;
+    
+    DMA2_Stream0->CR |= DMA_SxCR_EN;
+    DMA2->LIFCR |= DMA_LIFCR_CFEIF0 |
+                   DMA_LIFCR_CDMEIF0 |
+                   DMA_LIFCR_CTEIF0 |
+                   DMA_LIFCR_CHTIF0 |
+                   DMA_LIFCR_CTCIF0;
+    //Timer 3s Init
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;//Timer for ADC
+    TIM3->PSC = APB1_TIM/10000-1;
+    TIM3->ARR = 100;
+    TIM3->CR2 |= TIM_CR2_MMS_1;
+    TIM3->CR1 |= TIM_CR1_CEN;
 }
