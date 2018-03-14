@@ -202,6 +202,7 @@ uint8_t DF_data[10] = {0x7E, 0xFF, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE
 void TIM8_TRG_COM_TIM14_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
 void DMA1_Stream0_IRQHandler(void);
+void DMA2_Stream0_IRQHandler(void);
 void USART3_IRQHandler(void);	
                                 
 void Init_RCC(void);

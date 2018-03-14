@@ -29,13 +29,20 @@ int main(void)
     /*-- Init main clock --*/
     Init_GPIO();
  
+<<<<<<< HEAD
 /*		FLASH->KEYR = 0x45670123;
 		FLASH->KEYR = 0xCDEF89AB;	
 	
 		Init_ADC();
+=======
+    FLASH->KEYR = 0x45670123;
+    FLASH->KEYR = 0xCDEF89AB;	
+
+    Init_ADC();
+>>>>>>> 8d0da21e7c67797f657c343080bda40444a1cf5c
 	
     Init_TFT();
-		TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
+	TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
    
   	//-- Delay for TFT start --
     for(uint32_t delay = 0;delay < 10000000;delay++) 
@@ -114,9 +121,10 @@ int main(void)
 		
 	
     NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
-		NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-		NVIC_EnableIRQ(DMA1_Stream0_IRQn);
-		NVIC_EnableIRQ(USART3_IRQn);
+	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+    NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+	NVIC_EnableIRQ(USART3_IRQn);
 			
 		*/
     while(1)
@@ -224,8 +232,6 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     uint8_t i2c_sel_buff[2] = {TDA_MAIN_SOURCE, TDA_SOURCE_MUTE};
 		uint8_t i2c_vol_buff[2] = {TDA_VOLUME, VOLUME};
 		
-		uint8_t V_IN = (ADC_Buff[0]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
-		uint8_t P_IN = (ADC_Buff[1]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
 		
     if(GPIOC->IDR & GPIO_PIN_5) // source select & OFF audio
     {
@@ -641,19 +647,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
         TFT_TIME[38] = ((RTC->DR & RTC_DR_YU_Msk) >> RTC_DR_YU_Pos) + 0x30; // year
         TFT_TIME[37] = ((RTC->DR & RTC_DR_YT_Msk) >> RTC_DR_YT_Pos) + 0x30;
         
-				memcpy(&TFT_TIME[43], &day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1],9);
+		memcpy(&TFT_TIME[43], &day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1],9);
 
         TFT_send(TFT_TIME, sizeof(TFT_TIME));
-			
-				ADC_text[9]  =  V_IN/100 + 0x30;
-				ADC_text[10] = (V_IN -(V_IN/100)*100)/10 + 0x30;
-				ADC_text[12] = (V_IN -(V_IN/10)*10) + 0x30;
-				
-				ADC_text[16] =  P_IN/100 + 0x30;
-				ADC_text[17] = (P_IN -(P_IN/100)*100)/10 + 0x30;
-				ADC_text[19] = (P_IN -(P_IN/10)*10) + 0x30;
-				
-				TFT_send(ADC_text, sizeof(ADC_text));
 
 				if((INPUT_SEL == BT)&&(BT_connected == 0))
 					BT_send(BT_STATUS);
@@ -808,6 +804,29 @@ void DMA1_Stream0_IRQHandler(void)
 			}
 		}
 	}
+}
+
+void DMA2_Stream0_IRQHandler(void)
+{
+    DMA2->LIFCR |= DMA_LIFCR_CFEIF0 |
+                   DMA_LIFCR_CDMEIF0 |
+                   DMA_LIFCR_CTEIF0 |
+                   DMA_LIFCR_CHTIF0 |
+                   DMA_LIFCR_CTCIF0;
+	uint8_t V_IN = (ADC_Buff[0]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
+	uint8_t P_IN = (ADC_Buff[1]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
+    
+    ADC_text[9]  =  V_IN/100 + 0x30;
+    ADC_text[10] = (V_IN -(V_IN/100)*100)/10 + 0x30;
+    ADC_text[12] = (V_IN -(V_IN/10)*10) + 0x30;
+    
+    ADC_text[16] =  P_IN/100 + 0x30;
+    ADC_text[17] = (P_IN -(P_IN/100)*100)/10 + 0x30;
+    ADC_text[19] = (P_IN -(P_IN/10)*10) + 0x30;
+    
+    TFT_send(ADC_text, sizeof(ADC_text));
+
+
 }
 
 void USART3_IRQHandler(void)
@@ -976,25 +995,26 @@ void Init_BT(void)
 
 void BT_send(uint8_t query)
 {
-		DMA1->LIFCR = DMA_LIFCR_CTCIF3 |
-									DMA_LIFCR_CHTIF3 | 
-									DMA_LIFCR_CFEIF3 |
-									DMA_LIFCR_CTEIF3;	
-	
-		for(uint32_t delay = 0;delay < 100000;delay++){};
-			
-		DMA1_Stream3->M0AR = (uint32_t) bt_tx_query[query];
-		DMA1_Stream3->NDTR = 7;
-		DMA1_Stream3->CR |= DMA_SxCR_EN;
+    DMA1->LIFCR = DMA_LIFCR_CTCIF3 |
+                  DMA_LIFCR_CHTIF3 | 
+                  DMA_LIFCR_CFEIF3 |
+                  DMA_LIFCR_CTEIF3;	
+
+    for(uint32_t delay = 0;delay < 100000;delay++){};
+        
+    DMA1_Stream3->M0AR = (uint32_t) bt_tx_query[query];
+    DMA1_Stream3->NDTR = 7;
+    DMA1_Stream3->CR |= DMA_SxCR_EN;
 }
 
 void Init_DF(void)
 {
-		RCC->APB1ENR |= RCC_APB1ENR_UART5EN;
+	RCC->APB1ENR |= RCC_APB1ENR_UART5EN;
+    
     UART5->BRR = APB1/9600;
     UART5->CR1 = USART_CR1_UE |
                  USART_CR1_TE |
-								 USART_CR1_RE;
+				 USART_CR1_RE;
     UART5->CR3 = USART_CR3_DMAT|
                  USART_CR3_DMAR;
 	
@@ -1004,15 +1024,15 @@ void Init_DF(void)
     DMA1_Stream7->PAR = (uint32_t) &UART5->DR;
     DMA1_Stream7->M0AR = (uint32_t) DF_data;
     DMA1_Stream7->NDTR = 10;
-	
-		DMA1_Stream0->CR = DMA_SxCR_CIRC |	
-											 DMA_SxCR_MINC |
-											 DMA_SxCR_TCIE |
-											 DMA_SxCR_CHSEL_2;
-		DMA1_Stream0->PAR = (uint32_t) &UART5->DR;
-		DMA1_Stream0->M0AR = (uint32_t) df_rx_buff;
-		DMA1_Stream0->NDTR = 10;
-		DMA1_Stream0->CR |= DMA_SxCR_EN;
+
+    DMA1_Stream0->CR = DMA_SxCR_CIRC |	
+                       DMA_SxCR_MINC |
+                       DMA_SxCR_TCIE |
+                       DMA_SxCR_CHSEL_2;
+    DMA1_Stream0->PAR = (uint32_t) &UART5->DR;
+    DMA1_Stream0->M0AR = (uint32_t) df_rx_buff;
+    DMA1_Stream0->NDTR = 10;
+    DMA1_Stream0->CR |= DMA_SxCR_EN;
 }
 
 void DF_send(uint8_t CMD, uint8_t PAR)
@@ -1115,7 +1135,7 @@ uint8_t RDA_set_freq(uint16_t freq)
     
     return I2C1_Send(0xC0, RDA_buff,sizeof(RDA_buff));*/
     
-	  uint8_t tea[5];
+	uint8_t tea[5];
     freq = (4*(freq*100000UL+225000UL))/32768;
     tea[0] = freq >> 8;
     tea[1] = freq & 0xff;
@@ -1131,7 +1151,7 @@ uint8_t Init_TDA(void)
     uint8_t init_buff[19];
     
     init_buff[0] = 0x20; // AI 1 + Subaddres 00000 - Main source sel
-		init_buff[1] = (STATE == MAIN) ? TDA_inputs[INPUT_SEL] : TDA_SOURCE_MUTE;// Main source = SE2(FM), gain = 0;
+	init_buff[1] = (STATE == MAIN) ? TDA_inputs[INPUT_SEL] : TDA_SOURCE_MUTE;// Main source = SE2(FM), gain = 0;
     init_buff[2] = 0x00; // Loudless off
     init_buff[3] = 0xC7; // CLK FM off, SM step 2.56, 0.96, I2C, off
     init_buff[4] = VOLUME; // VOL 0;
@@ -1220,7 +1240,7 @@ void Init_ADC(void)
                         DMA_SxCR_MINC | 
                         DMA_SxCR_MSIZE_0 | 
                         DMA_SxCR_PSIZE_0 |
-												DMA_SxCR_TCIE;
+						DMA_SxCR_TCIE;
     DMA2_Stream0->PAR = (uint32_t) &ADC1->DR;
     DMA2_Stream0->M0AR = (uint32_t) ADC_Buff;
     DMA2_Stream0->NDTR = ADC_BUF_NUM;
@@ -1234,7 +1254,7 @@ void Init_ADC(void)
     //Timer 3s Init
     RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;//Timer for ADC
     TIM3->PSC = APB1_TIM/10000-1;
-    TIM3->ARR = 100;
+    TIM3->ARR = 1000;
     TIM3->CR2 |= TIM_CR2_MMS_1;
     TIM3->CR1 |= TIM_CR1_CEN;
 }
