@@ -29,7 +29,7 @@ int main(void)
     /*-- Init main clock --*/
     Init_GPIO();
  
-		FLASH->KEYR = 0x45670123;
+/*		FLASH->KEYR = 0x45670123;
 		FLASH->KEYR = 0xCDEF89AB;	
 	
 		Init_ADC();
@@ -37,7 +37,7 @@ int main(void)
     Init_TFT();
 		TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
    
-  	/*-- Delay for TFT start --*/
+  	//-- Delay for TFT start --
     for(uint32_t delay = 0;delay < 10000000;delay++) 
     {};
 			
@@ -118,7 +118,7 @@ int main(void)
 		NVIC_EnableIRQ(DMA1_Stream0_IRQn);
 		NVIC_EnableIRQ(USART3_IRQn);
 			
-		
+		*/
     while(1)
     {
     
@@ -129,14 +129,14 @@ void Init_RCC(void)
 {
     __IO uint32_t StartUpCounter = 0, HSEStatus = 0;
     
-    RCC->CR |= RCC_CR_HSION;
+    RCC->CR |= RCC_CR_HSEON;
 
-//    do
-//    {
-//        HSEStatus = RCC->CR & RCC_CR_HSERDY;
-//        StartUpCounter++;
-//    }    
-//    while((HSEStatus == 0) && (StartUpCounter != ((uint32_t)1000U)));
+    do
+    {
+        HSEStatus = RCC->CR & RCC_CR_HSERDY;
+        StartUpCounter++;
+    }    
+    while((HSEStatus == 0) && (StartUpCounter != ((uint32_t)1000U)));
     
     if( (RCC->CR & RCC_CR_HSIRDY) != RESET)
     {
@@ -158,7 +158,7 @@ void Init_RCC(void)
 				RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV2;
         
         /* Set PLL input sourse*/
-        RCC->PLLCFGR |= RCC_PLLCFGR_PLLSRC_HSI;
+        RCC->PLLCFGR |= RCC_PLLCFGR_PLLSRC_HSE;
         
         /*Set PLL M prescaler */
         RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLM_Msk;
@@ -195,6 +195,14 @@ void SysTick_Handler(void)
     if (del == (SysTicksClk/2)) // Per = 1s
     {
         del = 0;
+        if (GPIOB->ODR & GPIO_ODR_OD2)
+        {
+            GPIOB->BSRR |= GPIO_BSRR_BR2;
+        }
+        else
+        {
+            GPIOB->BSRR |= GPIO_BSRR_BS2;
+        }  			
     }
 }
 
@@ -822,7 +830,13 @@ void Init_GPIO(void)
                      RCC_AHB1ENR_GPIOBEN |
                      RCC_AHB1ENR_GPIOCEN |
 										 RCC_AHB1ENR_GPIODEN;
-    
+  
+		GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN2*2  |
+										GPIO_MODE_OUTPUT_PP << PIN12*2 |
+										GPIO_MODE_OUTPUT_PP << PIN13*2 |
+										GPIO_MODE_OUTPUT_PP << PIN14*2 |
+										GPIO_MODE_OUTPUT_PP << PIN15*2;
+	
     //Set GPIOA PIN0 as usart4 TX
     GPIOA->AFR[0] |= GPIO_AF8_UART4 << PIN0*4;
     GPIOA->PUPDR |= GPIO_PULLUP << PIN0*2;
