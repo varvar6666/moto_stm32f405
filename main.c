@@ -29,7 +29,6 @@ int main(void)
     /*-- Init main clock --*/
     Init_GPIO();
  
-<<<<<<< HEAD
 /*		FLASH->KEYR = 0x45670123;
 		FLASH->KEYR = 0xCDEF89AB;	
 	
