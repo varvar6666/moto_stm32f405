@@ -866,13 +866,12 @@ ARM Macro Assembler    Page 14
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
 erwork --depend=.\objects\startup_stm32f405xx.d -o.\objects\startup_stm32f405xx
-.o -ID:\projects\moto\keil\v2\RTE\Device\STM32F405RGTx -ID:\projects\moto\keil\
-v2\RTE\_Target_1 -ID:\Programs\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.0\CMSIS\Include -
-ID:\Programs\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.11.0\Drivers\CMSIS\Device\ST
-\STM32F4xx\Include -ID:\Programs\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.11.0\Dri
-vers\STM32F4xx_HAL_Driver\Inc --predefine="__UVISION_VERSION SETA 522" --predef
-ine="_RTE_ SETA 1" --predefine="STM32F405xx SETA 1" --list=.\listings\startup_s
-tm32f405xx.lst RTE\Device\STM32F405RGTx\startup_stm32f405xx.s
+.o -I.\RTE\Device\STM32F405RGTx -I.\RTE\_Target_1 -IC:\Keil_v5\ARM\PACK\ARM\CMS
+IS\5.3.0\CMSIS\Include -IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.12.0\Drivers\
+CMSIS\Device\ST\STM32F4xx\Include -IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\2.12
+.0\Drivers\STM32F4xx_HAL_Driver\Inc --predefine="__UVISION_VERSION SETA 524" --
+predefine="_RTE_ SETA 1" --predefine="STM32F405xx SETA 1" --list=.\listings\sta
+rtup_stm32f405xx.lst RTE\Device\STM32F405RGTx\startup_stm32f405xx.s
 
 
 

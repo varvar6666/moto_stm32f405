@@ -20,7 +20,6 @@
 #define RADIO_FREQ_ADR	MEM_ADDRESS + 0x4
 
 
-
 enum PINs
 {
     PIN0=0, PIN1,   PIN2,   PIN3,
@@ -29,10 +28,27 @@ enum PINs
     PIN12,  PIN13,  PIN14,  PIN15
 };
 
+#define AMP_ON  GPIOB->BSRR |= GPIO_BSRR_BR3
+#define AMP_OFF GPIOB->BSRR |= GPIO_BSRR_BS3
+
+#define BT_ON  GPIOC->BSRR |= GPIO_BSRR_BS13
+#define BT_OFF GPIOC->BSRR |= GPIO_BSRR_BR13
+
+#define BT_SOUCE     GPIOA->IDR & GPIO_PIN_10 //BT1 <-> Source/onoff
+#define BT_PREV      GPIOA->IDR & GPIO_PIN_11 //BT2 <-> PREV
+#define BT_NEXT      GPIOA->IDR & GPIO_PIN_12 //BT3 <-> NEXT
+#define BT_PP        GPIOA->IDR & GPIO_PIN_15 //BT4 <-> Play/payse 
+#define BT_VOL_UP    GPIOC->IDR & GPIO_PIN_10 //BT5 <-> VOL+
+#define BT_VOL_DOWN  GPIOC->IDR & GPIO_PIN_11 //BT6 <-> VOL-
+
+#define BT_CLK_DOWN GPIOA->IDR & GPIO_PIN_8  //Clock DOWN
+#define BT_CLK_UP   GPIOA->IDR & GPIO_PIN_9  //Clock UP
+
+
 enum STATEs
 {
     LOAD=0,
-		AUDIO_OFF,
+	AUDIO_OFF,
     MAIN,
     SET_TIME
 };
@@ -64,7 +80,8 @@ enum INPUTs
 
 #define TDA_VOLUME				0x03
 
-const uint8_t TDA_inputs[4] = {0x82, 0x84, 0x81, 0x83};
+//const uint8_t TDA_inputs[4] = {0x82, 0x84, 0x81, 0x83};
+const uint8_t TDA_inputs[4] = {0xFA, 0xF9, 0xFC, 0xFB};
 
 
 
@@ -125,7 +142,7 @@ uint8_t main_AUX_text[17] =  {'t','e','x','t','.','t','x','t','=','"','A','U','X
 	
 uint8_t main_VOL_text[18] = {'v','o','l','.','t','x','t','=','"','-','7','9','d','B','"',255,255,255};
 	
-uint8_t ADC_text[25] 			= {'A','D','C','.','t','x','t','=','"','0','0','.','0','V',' ',' ','0','0','.','0','V','"',255,255,255};
+uint8_t ADC_text[25] = {'A','D','C','.','t','x','t','=','"','0','0','.','0','V',' ',' ','0','0','.','0','V','"',255,255,255};
 																 
 /*--------------------------------------------------------------------------------*/
 // BT
@@ -137,8 +154,8 @@ enum BT_querys
     BT_PLAY_PAUSE,
     BT_FORWARD,
     BT_BACKWARD,
-		BT_DISC,
-		BT_RESET
+	BT_DISC,
+	BT_RESET
 };
 uint8_t bt_tx_query[6][7] = {{'A','T','#','M','V',13,10},
 														 {'A','T','#','M','A',13,10},
@@ -190,7 +207,7 @@ enum DF_status
     DF_ST_STOP=0,
     DF_ST_PLAY,
     DF_ST_PAUSE,
-		DF_ST_NO_USB
+	DF_ST_NO_USB
 };
 
 uint8_t DF_data[10] = {0x7E, 0xFF, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF};
@@ -203,7 +220,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
 void DMA1_Stream0_IRQHandler(void);
 void DMA2_Stream0_IRQHandler(void);
-void USART3_IRQHandler(void);	
+void UART5_IRQHandler(void);	
                                 
 void Init_RCC(void);
 void SysTick_Handler(void);
@@ -228,7 +245,7 @@ void DF_send(uint8_t CMD, uint8_t PAR);
 
 void Init_I2C1(void);
 uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size);
-uint8_t RDA_set_freq(uint16_t freq);
+uint8_t TEA_set_freq(uint16_t freq);
                             
 uint8_t Init_TDA(void);
 

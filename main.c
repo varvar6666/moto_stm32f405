@@ -1,6 +1,6 @@
 #include "main.h"
 
-uint8_t STATE = MAIN;
+uint8_t STATE = AUDIO_OFF;
 uint8_t SET_TIME_STATE = SET_TIME_HOUR;
 uint8_t INPUT_SEL = FM;
 uint8_t prev_state;
@@ -9,7 +9,7 @@ uint8_t OFF_counter = 0;
 
 uint8_t I2C_res;
 
-uint16_t RADIO_FREQ = 0;
+uint16_t RADIO_FREQ = 1040;
 
 uint8_t BT_connected = 0;
 uint8_t bt_rx_buff[BT_RX_BUFF_SIZE];
@@ -17,7 +17,7 @@ uint8_t bt_rx_buff[BT_RX_BUFF_SIZE];
 uint8_t DF_play = DF_ST_NO_USB;
 uint8_t df_rx_buff[10];
 
-int8_t VOLUME = 0;
+int8_t VOLUME = 15;
 
 uint16_t ADC_Buff[ADC_BUF_NUM];
 
@@ -29,18 +29,20 @@ int main(void)
     /*-- Init main clock --*/
     Init_GPIO();
  
-	FLASH->KEYR = 0x45670123;
-	FLASH->KEYR = 0xCDEF89AB;	
+    AMP_OFF;
+    
+    FLASH->KEYR = 0x45670123;
+    FLASH->KEYR = 0xCDEF89AB;	
 
     Init_ADC();
-	
+
     Init_TFT();
-	TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
+    TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
    
-  	//-- Delay for TFT start --
+    //-- Delay for TFT start --
     for(uint32_t delay = 0;delay < 10000000;delay++) 
     {};
-			
+
     loading_txt[8] = '2';
     loading_txt[9] = '5';
     TFT_send(loading_txt, sizeof(loading_txt));
@@ -58,27 +60,26 @@ int main(void)
     TFT_send(loading_txt, sizeof(loading_txt));
     
     Init_I2C1();
-    
-    TFT_send(pages[STATE], sizeof(pages[STATE]));
-
-    I2C_res = Init_TDA();
-    
-    I2C_res = RDA_set_freq(RADIO_FREQ); // Init FM
-
-/*   
+   
 	Init_BT();
 		
-    Init_DF();
+/*    Init_DF();
 //	DF_send(DF_RES, 0);
     DF_send(DF_PB_SORC, DF_USB);
     DF_send(DF_SET_VOL,30);
     DF_send(DF_Q_NUM_FILES, 0);
-		
+		*/
     //STATE = AUDIO_OFF;
     STATE = (0xFF000000 & flash_read(MEM_ADDRESS)) >> 24;
     INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
     VOLUME = (0xFF00 & flash_read(MEM_ADDRESS)) >> 8;
     RADIO_FREQ = (0xFFFF0000 & flash_read(RADIO_FREQ_ADR)) >> 16;
+
+    TFT_send(pages[STATE], sizeof(pages[STATE]));
+    
+    I2C_res = Init_TDA();
+    
+    I2C_res = TEA_set_freq(RADIO_FREQ); // Init FM
     
     if(STATE == MAIN)
     {
@@ -115,12 +116,12 @@ int main(void)
 		
 	
     NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
-	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+//	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
 	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
     NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-	NVIC_EnableIRQ(USART3_IRQn);
+	NVIC_EnableIRQ(UART5_IRQn);
 			
-		*/
+		
     while(1)
     {
     
@@ -147,17 +148,17 @@ void Init_RCC(void)
 
         /* Конфигурируем Flash на 2 цикла ожидания */
     	/* Это нужно потому, что Flash не может работать на высокой частоте */        
-				FLASH->ACR &= (uint32_t)((uint32_t)~FLASH_ACR_LATENCY);
-				FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_5WS;   
+        FLASH->ACR &= (uint32_t)((uint32_t)~FLASH_ACR_LATENCY);
+        FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_5WS;   
         
         /* HCLK = SYSCLK || AHB prescaler*/
         RCC->CFGR |= RCC_CFGR_HPRE_DIV1; //AHB clk = 100MHz
         
     	/* PCLK1 = HCLK || APB Low speed prescaler (APB1)*/
-				RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE1_DIV4;
+		RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE1_DIV4;
 
         /* PCLK2 = HCLK || APB high-speed prescaler (APB2)*/
-				RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV2;
+		RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV2;
         
         /* Set PLL input sourse*/
         RCC->PLLCFGR |= RCC_PLLCFGR_PLLSRC_HSE;
@@ -219,15 +220,15 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     static uint8_t week_day;
     static uint8_t year;
 	
-		static uint8_t delay_send = 100;
-	
-		delay_send++;
+    static uint8_t delay_send = 100;
+
+    delay_send++;
 	
     uint8_t i2c_sel_buff[2] = {TDA_MAIN_SOURCE, TDA_SOURCE_MUTE};
-		uint8_t i2c_vol_buff[2] = {TDA_VOLUME, VOLUME};
+	uint8_t i2c_vol_buff[2] = {TDA_VOLUME, VOLUME};
 		
 		
-    if(GPIOC->IDR & GPIO_PIN_5) // source select & OFF audio
+    if(BT_SOUCE) // source select & OFF audio
     {
         OFF_counter++;
         if((OFF_counter >= 20)&&(STATE == MAIN))
@@ -240,12 +241,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
             
             STATE = AUDIO_OFF;
 						
-						flash_write_newdata();
+			flash_write_newdata();
             
             TFT_send(pages[STATE], sizeof(pages[STATE]));
-						delay_send = 100;
+			delay_send = 100;
 					
-						BT_send(BT_DISC);
+			BT_send(BT_DISC);
+            AMP_OFF;
             /* ADD stop players  */
         }
     }
@@ -259,42 +261,42 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
                 if(INPUT_SEL>AUX) INPUT_SEL = FM;
 							
-								flash_write_newdata();
+                flash_write_newdata();
                 
                 i2c_sel_buff[0] = TDA_MAIN_SOURCE;
                 i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
                 I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
-                
+
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
-							
-							  switch (INPUT_SEL)
-								{
-									case FM:{
-														main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
-														main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
-														main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
-														main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-														
-														TFT_send(main_FM_text, sizeof(main_FM_text));
-													break;}
-									case BT:{
-														BT_send(BT_STATUS);
-														TFT_send(main_BT_text[BT_connected], sizeof(main_BT_text[BT_connected]));
-													break;}
-									case USB:{
-														DF_send(DF_Q_NUM_FILES, 0);
-														DF_send(DF_Q_CUR_FIL, 0);
-													break;}
-									case AUX:{
-														TFT_send(main_AUX_text, sizeof(main_AUX_text));
-													break;}
-								};
+                            
+                switch (INPUT_SEL)
+                {
+                    case FM:{
+                            main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
+                            main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+                            main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+                            main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+                            
+                            TFT_send(main_FM_text, sizeof(main_FM_text));
+                        break;}
+                    case BT:{
+                            BT_send(BT_STATUS);
+                            TFT_send(main_BT_text[BT_connected], sizeof(main_BT_text[BT_connected]));
+                        break;}
+                    case USB:{
+                            DF_send(DF_Q_NUM_FILES, 0);
+                            DF_send(DF_Q_CUR_FIL, 0);
+                        break;}
+                    case AUX:{
+                            TFT_send(main_AUX_text, sizeof(main_AUX_text));
+                        break;}
+                };
             }
             if(STATE == AUDIO_OFF)
             {
                 STATE = MAIN;
             
-								flash_write_newdata();
+				flash_write_newdata();
             
                 TFT_send(pages[STATE], sizeof(pages[STATE]));
 
@@ -304,170 +306,170 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
                 
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
-								switch (INPUT_SEL)
-								{
-									case FM:{
-														main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
-														main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
-														main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
-														main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-														
-														TFT_send(main_FM_text, sizeof(main_FM_text));
-													break;}
-									case BT:{
-														BT_send(BT_STATUS);
-														TFT_send(main_BT_text[BT_connected], sizeof(main_BT_text[BT_connected]));
-													break;}
-									case USB:{
-														DF_send(DF_Q_CUR_FIL, 0);
-													break;}								
-								};
+                switch (INPUT_SEL)
+                {
+                    case FM:{
+                            main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
+                            main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+                            main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+                            main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+                            
+                            TFT_send(main_FM_text, sizeof(main_FM_text));
+                        break;}
+                    case BT:{
+                            BT_send(BT_STATUS);
+                            TFT_send(main_BT_text[BT_connected], sizeof(main_BT_text[BT_connected]));
+                        break;}
+                    case USB:{
+                            DF_send(DF_Q_CUR_FIL, 0);
+                        break;}								
+                };
 
-								main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
-								main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
-								main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
-								
-								TFT_send(main_VOL_text, sizeof(main_VOL_text));
+                main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+                main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+                main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+                
+                TFT_send(main_VOL_text, sizeof(main_VOL_text));
             }
         }
         OFF_counter = 0;
     }
     
     
-		if(GPIOC->IDR & GPIO_PIN_4) // increase
-		{
-			if(STATE == MAIN)
-			{				
-				switch (INPUT_SEL)
-				{
-					case FM:{
-										RADIO_FREQ++;
-										if(RADIO_FREQ >= 1080)RADIO_FREQ = 850;
-										RDA_set_freq(RADIO_FREQ);
-										
-										flash_write_newdata();
-						
-										main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
-										main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
-										main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
-										main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-										
-										TFT_send(main_FM_text, sizeof(main_FM_text));
-										break;}
-					case BT:{
-										BT_send(BT_FORWARD);
-									break;}
-					case USB:{
-										DF_send(DF_NEXT,0);
-										DF_send(DF_Q_CUR_FIL,0);
-										DF_send(DF_Q_CUR_STAT,0);
-									break;}
-				
-				}
-			}
-		}
+    if(BT_NEXT) // increase
+    {
+        if(STATE == MAIN)
+        {				
+            switch (INPUT_SEL)
+            {
+                case FM:{
+                        RADIO_FREQ++;
+                        if(RADIO_FREQ >= 1080)RADIO_FREQ = 850;
+                        TEA_set_freq(RADIO_FREQ);
+                        
+                        flash_write_newdata();
+        
+                        main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
+                        main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+                        main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+                        main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+                        
+                        TFT_send(main_FM_text, sizeof(main_FM_text));
+                        break;}
+                case BT:{
+                        BT_send(BT_FORWARD);
+                    break;}
+                case USB:{
+                        DF_send(DF_NEXT,0);
+                        DF_send(DF_Q_CUR_FIL,0);
+                        DF_send(DF_Q_CUR_STAT,0);
+                    break;}
+            
+            }
+        }
+    }
 
-		if(GPIOC->IDR & GPIO_PIN_3) // play/pause
-		{
-			if(STATE == MAIN)
-			{				
-				switch (INPUT_SEL)
-				{
-					case BT:{
-										BT_send(BT_PLAY_PAUSE);
-									break;}
-					case USB:{
-										if (DF_play != DF_ST_NO_USB)
-										{
-											if(DF_play == DF_ST_PLAY)
-												DF_send(DF_PAUSE, 0);
-											if(DF_play == DF_ST_STOP)
-												DF_send(DF_RND_PLAY, 1);
-											if(DF_play == DF_ST_PAUSE)
-												DF_send(DF_PLAY, 0);
+    if(BT_PP) // play/pause
+    {
+        if(STATE == MAIN)
+        {				
+            switch (INPUT_SEL)
+            {
+                case BT:{
+                        BT_send(BT_PLAY_PAUSE);
+                    break;}
+                case USB:{
+                        if (DF_play != DF_ST_NO_USB)
+                        {
+                            if(DF_play == DF_ST_PLAY)
+                                DF_send(DF_PAUSE, 0);
+                            if(DF_play == DF_ST_STOP)
+                                DF_send(DF_RND_PLAY, 1);
+                            if(DF_play == DF_ST_PAUSE)
+                                DF_send(DF_PLAY, 0);
 
-											DF_send(DF_Q_CUR_FIL,0);
-										}
-										DF_send(DF_Q_CUR_STAT,0);
-									break;}
+                            DF_send(DF_Q_CUR_FIL,0);
+                        }
+                        DF_send(DF_Q_CUR_STAT,0);
+                    break;}
 
-				};
-			}
-		}
-		
-		if(GPIOC->IDR & GPIO_PIN_2) // decrease
-		{
-			if(STATE == MAIN)
-			{				
-				switch (INPUT_SEL)
-				{
-					case FM:{
-										RADIO_FREQ--;
-										if(RADIO_FREQ <= 850)RADIO_FREQ = 1080;
-										RDA_set_freq(RADIO_FREQ);
-										
-										flash_write_newdata();
-										
-										main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
-										main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
-										main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
-										main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-										
-										TFT_send(main_FM_text, sizeof(main_FM_text));	
-										break;}
-					case BT:{
-										BT_send(BT_BACKWARD);
-									break;}
-					case USB:{
-										DF_send(DF_PREW,0);
-										DF_send(DF_Q_CUR_FIL,0);
-										DF_send(DF_Q_CUR_STAT,0);
-									break;}
-				}
-			}
-		}
-		
-		if(GPIOB->IDR & GPIO_PIN_5) // increase volume
-		{
-			VOLUME++;
-			if(VOLUME > 15) VOLUME = 15;
-			
-			flash_write_newdata();
+            };
+        }
+    }
+    
+    if(BT_PREV) // decrease
+    {
+        if(STATE == MAIN)
+        {				
+            switch (INPUT_SEL)
+            {
+                case FM:{
+                        RADIO_FREQ--;
+                        if(RADIO_FREQ <= 850)RADIO_FREQ = 1080;
+                        TEA_set_freq(RADIO_FREQ);
+                        
+                        flash_write_newdata();
+                        
+                        main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
+                        main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+                        main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+                        main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+                        
+                        TFT_send(main_FM_text, sizeof(main_FM_text));	
+                        break;}
+                case BT:{
+                        BT_send(BT_BACKWARD);
+                    break;}
+                case USB:{
+                        DF_send(DF_PREW,0);
+                        DF_send(DF_Q_CUR_FIL,0);
+                        DF_send(DF_Q_CUR_STAT,0);
+                    break;}
+            }
+        }
+    }
+    
+    if(BT_VOL_UP) // increase volume
+    {
+        VOLUME++;
+        if(VOLUME > 15) VOLUME = 15;
+        
+        flash_write_newdata();
 
-			i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
-			I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+        i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
 
-			main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
-			main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
-			main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
-			
-			TFT_send(main_VOL_text, sizeof(main_VOL_text));
+        main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+        main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+        main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+        
+        TFT_send(main_VOL_text, sizeof(main_VOL_text));
 
-		}
-		
-		if(GPIOB->IDR & GPIO_PIN_4) // decrease volume
-		{
-			VOLUME--;
-			if(VOLUME < -79) VOLUME = -79;
-			
-			flash_write_newdata();
+    }
+    
+    if(BT_VOL_DOWN) // decrease volume
+    {
+        VOLUME--;
+        if(VOLUME < -79) VOLUME = -79;
+        
+        flash_write_newdata();
 
-			i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
-			I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+        i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
 
-			main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
-			main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
-			main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
-			
-			TFT_send(main_VOL_text, sizeof(main_VOL_text));
-		}
-		
-		if(GPIOC->IDR & GPIO_PIN_1)
-		{
-			DF_send(DF_Q_CUR_STAT,0);
-		}
-		
-		if(GPIOC->IDR & GPIO_PIN_8) // Clock button for increase value
+        main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+        main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+        main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+        
+        TFT_send(main_VOL_text, sizeof(main_VOL_text));
+    }
+    
+    if(GPIOC->IDR & GPIO_PIN_1)
+    {
+        DF_send(DF_Q_CUR_STAT,0);
+    }
+    
+    if(BT_CLK_UP) // Clock button for increase value
     {
         if(STATE == SET_TIME)
         {
@@ -532,51 +534,53 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                                     week_day++;
                                     if(week_day >= 8) week_day = 1;
 
-                                    memcpy(&set_time_txt[84], &day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1],9);
+                                    //memcpy(&set_time_txt[84], &day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1],9);
 
-                                    TFT_send(&set_time_txt[75], 16);
+                                    memcpy(&set_time_txt[84], &day_of_week[week_day-1],9);
                     
+                                    TFT_send(&set_time_txt[75], 23);
+                
                                     break;
-                                   }
-                case SET_SET:{
-                                    STATE = prev_state;
-                                    RCC->APB1ENR |= RCC_APB1ENR_PWREN;
-                                    PWR->CR |= PWR_CR_DBP;
-                                    RTC->WPR = 0xCA;
-                                    RTC->WPR = 0x53;
-                                    RTC->ISR |= RTC_ISR_INIT;
-                                    while((RTC->ISR & RTC_ISR_INITF) == 0){};
-                                    RTC->TR = (min/10 << 12) | 
-                                             ((min - ((min/10)*10)) << 8) | 
-                                              (hour/10 << 20) | 
-                                             ((hour - ((hour/10)*10)) << 16);
-                                    RTC->DR = (day/10 << 4)  | 
-                                              (day - (day/10)*10) | 
-                                              (mon/10 << 12) | 
-                                             ((mon - ((mon/10)*10)) << 8) | 
-                                              (year/10 << 20) |
-                                             ((year - ((year/10)*10)) << 16) |
-                                              (week_day << 13);
-                                    RTC->ISR &= ~RTC_ISR_INIT;
-                                    RTC->WPR = 0xFF;
-                                    PWR->CR &= ~PWR_CR_DBP;
-                                    
-                                    TFT_send(pages[STATE], sizeof(pages[STATE]));
-																		delay_send = 100;
-                                    break;
-                                   }
-                default:break;
+                               }
+            case SET_SET:{
+                                STATE = prev_state;
+                                RCC->APB1ENR |= RCC_APB1ENR_PWREN;
+                                PWR->CR |= PWR_CR_DBP;
+                                RTC->WPR = 0xCA;
+                                RTC->WPR = 0x53;
+                                RTC->ISR |= RTC_ISR_INIT;
+                                while((RTC->ISR & RTC_ISR_INITF) == 0){};
+                                RTC->TR = (min/10 << 12) | 
+                                         ((min - ((min/10)*10)) << 8) | 
+                                          (hour/10 << 20) | 
+                                         ((hour - ((hour/10)*10)) << 16);
+                                RTC->DR = (day/10 << 4)  | 
+                                          (day - (day/10)*10) | 
+                                          (mon/10 << 12) | 
+                                         ((mon - ((mon/10)*10)) << 8) | 
+                                          (year/10 << 20) |
+                                         ((year - ((year/10)*10)) << 16) |
+                                          (week_day << 13);
+                                RTC->ISR &= ~RTC_ISR_INIT;
+                                RTC->WPR = 0xFF;
+                                PWR->CR &= ~PWR_CR_DBP;
+                                
+                                TFT_send(pages[STATE], sizeof(pages[STATE]));
+                                                                    delay_send = 100;
+                                break;
+                               }
+            default:break;
             }
         }
     }
 
-    if((GPIOC->IDR & GPIO_PIN_9)) //Clock button for set time
+    if(BT_CLK_DOWN) //Clock button for set time
     {
         switch(STATE)
         {
-						case AUDIO_OFF:
+            case AUDIO_OFF:
             case MAIN:{
-												prev_state = STATE;
+                        prev_state = STATE;
                         STATE = SET_TIME;
                         TFT_send(pages[STATE], sizeof(pages[STATE]));
                         
@@ -584,7 +588,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
                         TFT_send(set_time_tft[SET_TIME_STATE], sizeof(set_time_tft[SET_TIME_STATE]));
                             
-												hour = ((RTC->TR & RTC_TR_HT_Msk) >> RTC_TR_HT_Pos)*10 + ((RTC->TR & RTC_TR_HU_Msk) >> RTC_TR_HU_Pos);
+						hour = ((RTC->TR & RTC_TR_HT_Msk) >> RTC_TR_HT_Pos)*10 + ((RTC->TR & RTC_TR_HU_Msk) >> RTC_TR_HU_Pos);
                         min  = ((RTC->TR & RTC_TR_MNT_Msk)>> RTC_TR_MNT_Pos)*10+ ((RTC->TR & RTC_TR_MNU_Msk)>> RTC_TR_MNU_Pos);
                         day  = ((RTC->DR & RTC_DR_DT_Msk) >> RTC_DR_DT_Pos)*10 +  (RTC->DR & RTC_DR_DU_Msk);
                         mon  = ((RTC->DR & RTC_DR_MT_Msk) >> RTC_DR_MT_Pos)*10 + ((RTC->DR & RTC_DR_MU_Msk) >> RTC_DR_MU_Pos);
@@ -606,7 +610,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         set_time_txt[69] = year/10 + 0x30;
                         set_time_txt[70] = (year - ((year/10)*10)) + 0x30;
                         
-												memcpy(&set_time_txt[84], &day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1],9);
+						memcpy(&set_time_txt[84], &day_of_week[((RTC->DR & RTC_DR_WDU_Msk) >> RTC_DR_WDU_Pos) - 1],9);
                             
                         TFT_send(set_time_txt, sizeof(set_time_txt));
 
@@ -625,7 +629,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
     if(((STATE == MAIN)||(STATE == AUDIO_OFF))&&(delay_send >= 100))
     {
-				delay_send = 0;
+		delay_send = 0;
         TFT_TIME[14] = ((RTC->TR & RTC_TR_MNU_Msk)>> RTC_TR_MNU_Pos)+ 0x30; // minute
         TFT_TIME[13] = ((RTC->TR & RTC_TR_MNT_Msk)>> RTC_TR_MNT_Pos)+ 0x30;
         
@@ -645,26 +649,26 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
         TFT_send(TFT_TIME, sizeof(TFT_TIME));
 
-				if((INPUT_SEL == BT)&&(BT_connected == 0))
-					BT_send(BT_STATUS);
-				if((INPUT_SEL == USB)&&(DF_play == DF_ST_NO_USB))
-					DF_send(DF_Q_CUR_STAT, 0);
+        if((INPUT_SEL == BT)&&(BT_connected == 0))
+            BT_send(BT_STATUS); 
+        if((INPUT_SEL == USB)&&(DF_play == DF_ST_NO_USB))
+            DF_send(DF_Q_CUR_STAT, 0);
     }
 
 }
 
-void DMA1_Stream1_IRQHandler(void)
+void DMA1_Stream0_IRQHandler(void)
 {
 	static uint8_t bt_inc = 0;
-	DMA1->LIFCR = DMA_LIFCR_CTCIF1 |
-                DMA_LIFCR_CHTIF1 | 
-                DMA_LIFCR_CFEIF1 |
-                DMA_LIFCR_CTEIF1 |
-								DMA_LIFCR_CDMEIF1;
+	DMA1->LIFCR = DMA_LIFCR_CTCIF0 |
+                  DMA_LIFCR_CHTIF0 | 
+                  DMA_LIFCR_CFEIF0 |
+                  DMA_LIFCR_CTEIF0 |
+				  DMA_LIFCR_CDMEIF0;
 	
-	DMA1_Stream1->M0AR = (uint32_t) bt_rx_buff;
-	DMA1_Stream1->NDTR = BT_RX_BUFF_SIZE;
-	DMA1_Stream1->CR |= DMA_SxCR_EN;
+	DMA1_Stream0->M0AR = (uint32_t) bt_rx_buff;
+	DMA1_Stream0->NDTR = BT_RX_BUFF_SIZE;
+	DMA1_Stream0->CR |= DMA_SxCR_EN;
 	
 	if ((STATE == MAIN) && (INPUT_SEL == BT))
 	{
@@ -736,7 +740,7 @@ void DMA1_Stream1_IRQHandler(void)
 		
 }
 
-void DMA1_Stream0_IRQHandler(void)
+void DMA1_Stream1_IRQHandler(void)
 {
 	DMA1->LIFCR = DMA_LIFCR_CTCIF0 |
                 DMA_LIFCR_CHTIF0 | 
@@ -807,8 +811,8 @@ void DMA2_Stream0_IRQHandler(void)
                    DMA_LIFCR_CTEIF0 |
                    DMA_LIFCR_CHTIF0 |
                    DMA_LIFCR_CTCIF0;
-	uint8_t V_IN = (ADC_Buff[0]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
-	uint8_t P_IN = (ADC_Buff[1]*164)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
+	uint8_t V_IN = (ADC_Buff[0]*159)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
+	uint8_t P_IN = (ADC_Buff[1]*159)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
     
     ADC_text[9]  =  V_IN/100 + 0x30;
     ADC_text[10] = (V_IN -(V_IN/100)*100)/10 + 0x30;
@@ -819,23 +823,19 @@ void DMA2_Stream0_IRQHandler(void)
     ADC_text[19] = (P_IN -(P_IN/10)*10) + 0x30;
     
     TFT_send(ADC_text, sizeof(ADC_text));
-
-
 }
 
-void USART3_IRQHandler(void)
+void UART5_IRQHandler(void)
 {
-	if(USART3->SR & USART_SR_IDLE)
+	if(UART5->SR & USART_SR_IDLE)
 	{
 		volatile uint32_t tmp;
-		tmp = USART3->SR;
-		tmp = USART3->DR;
+		tmp = UART5->SR;
+		tmp = UART5->DR;
 		(void)tmp;
-		DMA1_Stream1->CR &= ~DMA_SxCR_EN;
+		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
 	}
 }
-
-
 
 void Init_GPIO(void)
 {
@@ -844,12 +844,19 @@ void Init_GPIO(void)
                      RCC_AHB1ENR_GPIOCEN |
 					 RCC_AHB1ENR_GPIODEN;
   
-    GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN2*2  |
-                    GPIO_MODE_OUTPUT_PP << PIN12*2 |
-                    GPIO_MODE_OUTPUT_PP << PIN13*2 |
-                    GPIO_MODE_OUTPUT_PP << PIN14*2 |
-                    GPIO_MODE_OUTPUT_PP << PIN15*2;
+    //LEDs
+    GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN2*2  | // LED_WORK
+                    GPIO_MODE_OUTPUT_PP << PIN12*2 | // Green 1
+                    GPIO_MODE_OUTPUT_PP << PIN13*2 | // Red   1
+                    GPIO_MODE_OUTPUT_PP << PIN14*2 | // Green 2
+                    GPIO_MODE_OUTPUT_PP << PIN15*2;  // Red   2
 	
+    //Amplifier ON/OFF
+    GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN3*2;
+    
+    //BT ON/OFF
+    GPIOC->MODER |= GPIO_MODE_OUTPUT_PP << PIN13*2;
+    
     //Set GPIOA PIN0 as usart4 TX <===> DF
     GPIOA->AFR[0] |= GPIO_AF8_UART4 << PIN0*4;
     GPIOA->PUPDR |= GPIO_PULLUP << PIN0*2;
@@ -858,7 +865,7 @@ void Init_GPIO(void)
     
 	//Set GPIOB PIN10 as usart3 TX & PIN11 as usart3 RX <===> TFT
     GPIOB->AFR[1] |= GPIO_AF7_USART3 << (PIN10*4-32) |
-					 GPIO_AF7_USART3 << (PIN11*4-32);
+                     GPIO_AF7_USART3 << (PIN11*4-32);
     GPIOB->PUPDR |= GPIO_PULLUP << PIN10*2 |
 					GPIO_PULLUP << PIN11*2;
     GPIOB->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN10*2 |
@@ -888,13 +895,16 @@ void Init_GPIO(void)
     GPIOB->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN8*2 |
                       GPIO_SPEED_FREQ_VERY_HIGH << PIN9*2;    
     
-    GPIOC->MODER |= GPIO_MODE_INPUT << PIN0*2 |
-                    GPIO_MODE_INPUT << PIN1*2 |
-                    GPIO_MODE_INPUT << PIN2*2 |
-                    GPIO_MODE_INPUT << PIN3*2 |
-                    GPIO_MODE_INPUT << PIN4*2 |
-                    GPIO_MODE_INPUT << PIN5*2 |
-                    GPIO_MODE_INPUT << PIN6*2;
+    GPIOA->MODER &= ~(0x3 << PIN15*2);
+    GPIOA->PUPDR &= ~(0x3 << PIN15*2);
+	GPIOA->MODER |= GPIO_MODE_INPUT << PIN8 *2 | //BT_CLK_DOWN
+                    GPIO_MODE_INPUT << PIN9 *2 | //BT_CLK_UP
+                    GPIO_MODE_INPUT << PIN10*2 | //BT1
+                    GPIO_MODE_INPUT << PIN11*2 | //BT2
+                    GPIO_MODE_INPUT << PIN12*2 | //BT3
+                    GPIO_MODE_INPUT << PIN15*2;  //BT4
+    GPIOC->MODER |= GPIO_MODE_INPUT << PIN10*2 | //BT5
+                    GPIO_MODE_INPUT << PIN11*2;  //BT6
 		
 	//Set GPIOA PIN3,4 GPIOC PIN10 as analog input
     GPIOA->MODER |=	GPIO_MODE_ANALOG << PIN3*2 | //ADC3 - IN
@@ -961,45 +971,47 @@ void TFT_send(uint8_t *buff, uint8_t size)
 void Init_BT(void)
 {
     //MX_USART3_UART_Init();
-    RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
-    USART3->BRR = APB1/115200;
-    USART3->CR1 = USART_CR1_UE | 
-                  USART_CR1_TE | 
-                  USART_CR1_RE |
-									USART_CR1_IDLEIE;
-    USART3->CR3 = USART_CR3_DMAR |
-                  USART_CR3_DMAT;
+    RCC->APB1ENR |= RCC_APB1ENR_UART5EN;
+    UART5->BRR = APB1/115200;
+    UART5->CR1 = USART_CR1_UE | 
+                 USART_CR1_TE | 
+                 USART_CR1_RE |
+				 USART_CR1_IDLEIE;
+    UART5->CR3 = USART_CR3_DMAR |
+                 USART_CR3_DMAT;
     
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
-    DMA1_Stream1->CR = DMA_SxCR_MINC |
+    DMA1_Stream0->CR = DMA_SxCR_MINC |
 					   DMA_SxCR_TCIE |
                        DMA_SxCR_CHSEL_2;
-    DMA1_Stream1->PAR = (uint32_t) &USART3->DR;
-    DMA1_Stream1->M0AR = (uint32_t) bt_rx_buff;
-    DMA1_Stream1->NDTR = BT_RX_BUFF_SIZE;
-    DMA1_Stream1->CR |= DMA_SxCR_EN;
+    DMA1_Stream0->PAR = (uint32_t) &UART5->DR;
+    DMA1_Stream0->M0AR = (uint32_t) bt_rx_buff;
+    DMA1_Stream0->NDTR = BT_RX_BUFF_SIZE;
+    DMA1_Stream0->CR |= DMA_SxCR_EN;
     
-    DMA1_Stream3->CR = DMA_SxCR_DIR_0 |  //=> S4
+    DMA1_Stream7->CR = DMA_SxCR_DIR_0 |  //=> S4
                        DMA_SxCR_MINC |
                        DMA_SxCR_CHSEL_2;
-    DMA1_Stream3->PAR = (uint32_t) &USART3->DR;
+    DMA1_Stream7->PAR = (uint32_t) &UART5->DR;
 /*		DMA1_Stream3->M0AR = (uint32_t) bt_tx_query[BT_RESET];
 		DMA1_Stream3->NDTR = 7;
 		DMA1_Stream3->CR |= DMA_SxCR_EN;*/
+        
+    BT_ON;
 }
 
 void BT_send(uint8_t query)
 {
-    DMA1->LIFCR = DMA_LIFCR_CTCIF3 |
-                  DMA_LIFCR_CHTIF3 | 
-                  DMA_LIFCR_CFEIF3 |
-                  DMA_LIFCR_CTEIF3;	
+    DMA1->HIFCR = DMA_HIFCR_CTCIF7 |
+                  DMA_HIFCR_CHTIF7 | 
+                  DMA_HIFCR_CFEIF7 |
+                  DMA_HIFCR_CTEIF7;	
 
     for(uint32_t delay = 0;delay < 100000;delay++){};
         
-    DMA1_Stream3->M0AR = (uint32_t) bt_tx_query[query];
-    DMA1_Stream3->NDTR = 7;
-    DMA1_Stream3->CR |= DMA_SxCR_EN;
+    DMA1_Stream7->M0AR = (uint32_t) bt_tx_query[query];
+    DMA1_Stream7->NDTR = 7;
+    DMA1_Stream7->CR |= DMA_SxCR_EN;
 }
 
 void Init_DF(void)
@@ -1032,22 +1044,22 @@ void Init_DF(void)
 
 void DF_send(uint8_t CMD, uint8_t PAR)
 {
-		DMA1->HIFCR = DMA_HIFCR_CTCIF7 |
+	DMA1->HIFCR = DMA_HIFCR_CTCIF7 |
 									DMA_HIFCR_CHTIF7 | 
 									DMA_HIFCR_CFEIF7 |
 									DMA_HIFCR_CTEIF7;
 
-		for(uint32_t delay = 0;delay < 1000000;delay++){};
+	for(uint32_t delay = 0;delay < 1000000;delay++){};
 			
-		DF_data[3] = CMD;
+	DF_data[3] = CMD;
     DF_data[6] = PAR;
 		
-		uint16_t sum = 0 - (DF_data[1] + DF_data[2] + DF_data[3] + DF_data[4] + DF_data[5] + DF_data[6]);
+	uint16_t sum = 0 - (DF_data[1] + DF_data[2] + DF_data[3] + DF_data[4] + DF_data[5] + DF_data[6]);
     
     DF_data[7] = ((sum & 0xFF00) >> 8);
     DF_data[8] = sum & 0xFF;	
 
-		DMA1_Stream7->NDTR = 10;
+	DMA1_Stream7->NDTR = 10;
     DMA1_Stream7->CR |= DMA_SxCR_EN;
 		
 		//while(DMA1_Stream7->NDTR != 0){};
@@ -1081,7 +1093,7 @@ uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size)
     while (!(I2C1->SR1 & I2C_SR1_SB))       // ждем окончания формирования сигнала "Старт"
     {
         if(I2C1->SR1 & I2C_SR1_BERR)
-            return 1;
+        return 1;
     }
     (void) I2C1->SR1;(void) I2C1->SR2;
 
@@ -1115,9 +1127,9 @@ uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size)
     return 0;
 }
 
-uint8_t RDA_set_freq(uint16_t freq)
-{/*
-    uint8_t RDA_buff[12];
+uint8_t TEA_set_freq(uint16_t freq)
+{
+  /*  uint8_t RDA_buff[12];
     
     RDA_buff[0] = 0xD0; RDA_buff[1] = 0x05; //02H:DHIZ - normal, MONO - stereo, BASS - boost en |02L: NEW_METHOD, EN
     freq-=760;
@@ -1130,13 +1142,15 @@ uint8_t RDA_set_freq(uint16_t freq)
     
     return I2C1_Send(0xC0, RDA_buff,sizeof(RDA_buff));*/
     
-	uint8_t tea[5];
-    freq = (4*(freq*100000UL+225000UL))/32768;
-    tea[0] = freq >> 8;
+    uint8_t tea[5];
+    
+	freq = (4*(freq*100000UL+225000UL))/32768;
+    
+	tea[0] = freq >> 8;
     tea[1] = freq & 0xff;
     
     tea[2] = 0x10;
-    tea[3] = 0x10;
+    tea[3] = 0x12;
     tea[4] = 0;//high ingection
     return I2C1_Send(0xC0, tea,sizeof(tea));
 }
@@ -1153,7 +1167,7 @@ uint8_t Init_TDA(void)
     init_buff[5] = 0x90; // Ref out ext + treble off;
     init_buff[6] = 0x50; // mid off
     init_buff[7] = 0x50; // bass off
-    init_buff[8] = 0x05; // sec source - mute, rear - main
+    init_buff[8] = 0x7F; // sec source - mute, rear - main
     init_buff[9] = 0x00; // sub off all
     init_buff[10]= 0xFF; // mix off;
     init_buff[11]= 0x00;
