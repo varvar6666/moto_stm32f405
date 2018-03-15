@@ -1,6 +1,6 @@
 #include "main.h"
 
-uint8_t STATE = LOAD;
+uint8_t STATE = MAIN;
 uint8_t SET_TIME_STATE = SET_TIME_HOUR;
 uint8_t INPUT_SEL = FM;
 uint8_t prev_state;
@@ -29,16 +29,10 @@ int main(void)
     /*-- Init main clock --*/
     Init_GPIO();
  
-/*		FLASH->KEYR = 0x45670123;
-		FLASH->KEYR = 0xCDEF89AB;	
-	
-		Init_ADC();
-=======
-    FLASH->KEYR = 0x45670123;
-    FLASH->KEYR = 0xCDEF89AB;	
+	FLASH->KEYR = 0x45670123;
+	FLASH->KEYR = 0xCDEF89AB;	
 
     Init_ADC();
->>>>>>> 8d0da21e7c67797f657c343080bda40444a1cf5c
 	
     Init_TFT();
 	TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
@@ -65,56 +59,57 @@ int main(void)
     
     Init_I2C1();
     
-		Init_BT();
+    TFT_send(pages[STATE], sizeof(pages[STATE]));
+
+    I2C_res = Init_TDA();
+    
+    I2C_res = RDA_set_freq(RADIO_FREQ); // Init FM
+
+/*   
+	Init_BT();
 		
-		Init_DF();
-//		DF_send(DF_RES, 0);
-		DF_send(DF_PB_SORC, DF_USB);
-		DF_send(DF_SET_VOL,30);
-		DF_send(DF_Q_NUM_FILES, 0);
+    Init_DF();
+//	DF_send(DF_RES, 0);
+    DF_send(DF_PB_SORC, DF_USB);
+    DF_send(DF_SET_VOL,30);
+    DF_send(DF_Q_NUM_FILES, 0);
 		
     //STATE = AUDIO_OFF;
-		STATE = (0xFF000000 & flash_read(MEM_ADDRESS)) >> 24;
-		INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
-		VOLUME = (0xFF00 & flash_read(MEM_ADDRESS)) >> 8;
-		RADIO_FREQ = (0xFFFF0000 & flash_read(RADIO_FREQ_ADR)) >> 16;
-
-		TFT_send(pages[STATE], sizeof(pages[STATE]));
-
-		I2C_res = Init_TDA();
-		
-		I2C_res = RDA_set_freq(RADIO_FREQ); // Init FM
-		
-		if(STATE == MAIN)
-		{
-				TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
-				main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
-				main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
-				main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
-			
-				TFT_send(main_VOL_text, sizeof(main_VOL_text));
-			
-				switch (INPUT_SEL)
-				{
-					case FM:{
-										main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
-										main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
-										main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
-										main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-										
-										TFT_send(main_FM_text, sizeof(main_FM_text));
-									break;}
-					case BT:{
-										BT_send(BT_STATUS);
-									break;}
-					case USB:{
-										DF_send(DF_Q_CUR_STAT, 0);
-									break;}
-					case AUX:{
-										TFT_send(main_AUX_text, sizeof(main_AUX_text));
-									break;}				
-				};
-		}
+    STATE = (0xFF000000 & flash_read(MEM_ADDRESS)) >> 24;
+    INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
+    VOLUME = (0xFF00 & flash_read(MEM_ADDRESS)) >> 8;
+    RADIO_FREQ = (0xFFFF0000 & flash_read(RADIO_FREQ_ADR)) >> 16;
+    
+    if(STATE == MAIN)
+    {
+            TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+            main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+            main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+            main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+        
+            TFT_send(main_VOL_text, sizeof(main_VOL_text));
+        
+            switch (INPUT_SEL)
+            {
+                case FM:{
+                                    main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
+                                    main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+                                    main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+                                    main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+                                    
+                                    TFT_send(main_FM_text, sizeof(main_FM_text));
+                                break;}
+                case BT:{
+                                    BT_send(BT_STATUS);
+                                break;}
+                case USB:{
+                                    DF_send(DF_Q_CUR_STAT, 0);
+                                break;}
+                case AUX:{
+                                    TFT_send(main_AUX_text, sizeof(main_AUX_text));
+                                break;}				
+            };
+    }
 
 
 		
@@ -847,38 +842,39 @@ void Init_GPIO(void)
     RCC-> AHB1ENR |= RCC_AHB1ENR_GPIOAEN |
                      RCC_AHB1ENR_GPIOBEN |
                      RCC_AHB1ENR_GPIOCEN |
-										 RCC_AHB1ENR_GPIODEN;
+					 RCC_AHB1ENR_GPIODEN;
   
-		GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN2*2  |
-										GPIO_MODE_OUTPUT_PP << PIN12*2 |
-										GPIO_MODE_OUTPUT_PP << PIN13*2 |
-										GPIO_MODE_OUTPUT_PP << PIN14*2 |
-										GPIO_MODE_OUTPUT_PP << PIN15*2;
+    GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN2*2  |
+                    GPIO_MODE_OUTPUT_PP << PIN12*2 |
+                    GPIO_MODE_OUTPUT_PP << PIN13*2 |
+                    GPIO_MODE_OUTPUT_PP << PIN14*2 |
+                    GPIO_MODE_OUTPUT_PP << PIN15*2;
 	
-    //Set GPIOA PIN0 as usart4 TX
+    //Set GPIOA PIN0 as usart4 TX <===> DF
     GPIOA->AFR[0] |= GPIO_AF8_UART4 << PIN0*4;
     GPIOA->PUPDR |= GPIO_PULLUP << PIN0*2;
     GPIOA->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN0*2;
     GPIOA->MODER |= GPIO_MODE_AF_PP << PIN0*2;
     
-	  //Set GPIOB PIN10 as usart3 TX & PIN11 as usart3 RX
+	//Set GPIOB PIN10 as usart3 TX & PIN11 as usart3 RX <===> TFT
     GPIOB->AFR[1] |= GPIO_AF7_USART3 << (PIN10*4-32) |
-										 GPIO_AF7_USART3 << (PIN11*4-32);
+					 GPIO_AF7_USART3 << (PIN11*4-32);
     GPIOB->PUPDR |= GPIO_PULLUP << PIN10*2 |
-										GPIO_PULLUP << PIN11*2;
+					GPIO_PULLUP << PIN11*2;
     GPIOB->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN10*2 |
-											GPIO_SPEED_FREQ_VERY_HIGH << PIN1*2;
+					  GPIO_SPEED_FREQ_VERY_HIGH << PIN1*2;
     GPIOB->MODER |= GPIO_MODE_AF_PP << PIN10*2 |
-										GPIO_MODE_AF_PP << PIN11*2;
-		//Set GPIOC PIN12 as usart5 TX & GPIOD PIN2 as usart5 RX
-		GPIOC->AFR[1] |= GPIO_AF8_UART5 << (PIN12*4-32);
-		GPIOD->AFR[0] |= GPIO_AF8_UART5 <<  PIN2*4;
-		GPIOC->PUPDR |= GPIO_PULLUP << PIN12*2;
-		GPIOD->PUPDR |= GPIO_PULLUP << PIN2*2;
-		GPIOC->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN12*2;
-		GPIOD->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN2*2;
-		GPIOC->MODER |= GPIO_MODE_AF_PP << PIN12*2;
-		GPIOD->MODER |= GPIO_MODE_AF_PP << PIN2*2;
+					GPIO_MODE_AF_PP << PIN11*2;
+                    
+    //Set GPIOC PIN12 as usart5 TX & GPIOD PIN2 as usart5 RX <===> BT
+    GPIOC->AFR[1] |= GPIO_AF8_UART5 << (PIN12*4-32);
+    GPIOD->AFR[0] |= GPIO_AF8_UART5 <<  PIN2*4;
+    GPIOC->PUPDR |= GPIO_PULLUP << PIN12*2;
+    GPIOD->PUPDR |= GPIO_PULLUP << PIN2*2;
+    GPIOC->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN12*2;
+    GPIOD->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN2*2;
+    GPIOC->MODER |= GPIO_MODE_AF_PP << PIN12*2;
+    GPIOD->MODER |= GPIO_MODE_AF_PP << PIN2*2;
 		
     //GPIOB PIN8,9 I2C1 
     GPIOB->AFR[1] |= GPIO_AF4_I2C1 << (PIN8*4-32) |
@@ -892,15 +888,15 @@ void Init_GPIO(void)
     GPIOB->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN8*2 |
                       GPIO_SPEED_FREQ_VERY_HIGH << PIN9*2;    
     
-		GPIOC->MODER |= GPIO_MODE_INPUT << PIN0*2 |
-										GPIO_MODE_INPUT << PIN1*2 |
-										GPIO_MODE_INPUT << PIN2*2 |
-										GPIO_MODE_INPUT << PIN3*2 |
-										GPIO_MODE_INPUT << PIN4*2 |
-										GPIO_MODE_INPUT << PIN5*2 |
-										GPIO_MODE_INPUT << PIN6*2;
+    GPIOC->MODER |= GPIO_MODE_INPUT << PIN0*2 |
+                    GPIO_MODE_INPUT << PIN1*2 |
+                    GPIO_MODE_INPUT << PIN2*2 |
+                    GPIO_MODE_INPUT << PIN3*2 |
+                    GPIO_MODE_INPUT << PIN4*2 |
+                    GPIO_MODE_INPUT << PIN5*2 |
+                    GPIO_MODE_INPUT << PIN6*2;
 		
-		//Set GPIOA PIN3,4 GPIOC PIN10 as analog input
+	//Set GPIOA PIN3,4 GPIOC PIN10 as analog input
     GPIOA->MODER |=	GPIO_MODE_ANALOG << PIN3*2 | //ADC3 - IN
                     GPIO_MODE_ANALOG << PIN4*2;  //ADC4 - prevmo
     GPIOA->OSPEEDR |=	GPIO_SPEED_FREQ_VERY_HIGH << PIN3*2 |
@@ -932,34 +928,34 @@ void Init_RTC(void)
 
 void Init_TFT(void)
 {
-    //UART4 to TFT
-    RCC->APB1ENR |= RCC_APB1ENR_UART4EN;
-    UART4->BRR = APB1/115200;
-    UART4->CR1 = USART_CR1_UE |
-                 USART_CR1_TE;
-    UART4->CR3 = USART_CR3_DMAT;
+    //UART3 to TFT
+    RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
+    USART3->BRR = APB1/115200;
+    USART3->CR1 = USART_CR1_UE |
+                  USART_CR1_TE;
+    USART3->CR3 = USART_CR3_DMAT;
     
     //DMA1_Stream4 for UART4
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
-    DMA1_Stream4->CR = DMA_SxCR_DIR_0 |
+    DMA1_Stream3->CR = DMA_SxCR_DIR_0 |
                        DMA_SxCR_MINC |
                        DMA_SxCR_CHSEL_2;
-    DMA1_Stream4->PAR = (uint32_t) &UART4->DR;
+    DMA1_Stream3->PAR = (uint32_t) &USART3->DR;
 }
 
 void TFT_send(uint8_t *buff, uint8_t size)
 {
     //while(DMA1_Stream4->NDTR != 0){};
 			
-    DMA1_Stream4->M0AR = (uint32_t) buff;
-    DMA1_Stream4->NDTR = size;
-    DMA1->HIFCR = DMA_HIFCR_CTCIF4 |
-                  DMA_HIFCR_CHTIF4 | 
-                  DMA_HIFCR_CFEIF4 |
-                  DMA_HIFCR_CTEIF4;
-    DMA1_Stream4->CR |= DMA_SxCR_EN;
+    DMA1_Stream3->M0AR = (uint32_t) buff;
+    DMA1_Stream3->NDTR = size;
+    DMA1->LIFCR = DMA_LIFCR_CTCIF3 |
+                  DMA_LIFCR_CHTIF3 | 
+                  DMA_LIFCR_CFEIF3 |
+                  DMA_LIFCR_CTEIF3;
+    DMA1_Stream3->CR |= DMA_SxCR_EN;
 	
-	  while(DMA1_Stream4->NDTR != 0){};
+	while(DMA1_Stream3->NDTR != 0){};
 }
 
 void Init_BT(void)
@@ -976,14 +972,14 @@ void Init_BT(void)
     
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
     DMA1_Stream1->CR = DMA_SxCR_MINC |
-											 DMA_SxCR_TCIE |
+					   DMA_SxCR_TCIE |
                        DMA_SxCR_CHSEL_2;
     DMA1_Stream1->PAR = (uint32_t) &USART3->DR;
     DMA1_Stream1->M0AR = (uint32_t) bt_rx_buff;
     DMA1_Stream1->NDTR = BT_RX_BUFF_SIZE;
     DMA1_Stream1->CR |= DMA_SxCR_EN;
     
-    DMA1_Stream3->CR = DMA_SxCR_DIR_0 |
+    DMA1_Stream3->CR = DMA_SxCR_DIR_0 |  //=> S4
                        DMA_SxCR_MINC |
                        DMA_SxCR_CHSEL_2;
     DMA1_Stream3->PAR = (uint32_t) &USART3->DR;
@@ -1120,15 +1116,15 @@ uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size)
 }
 
 uint8_t RDA_set_freq(uint16_t freq)
-{
-/*    uint8_t RDA_buff[12];
+{/*
+    uint8_t RDA_buff[12];
     
     RDA_buff[0] = 0xD0; RDA_buff[1] = 0x05; //02H:DHIZ - normal, MONO - stereo, BASS - boost en |02L: NEW_METHOD, EN
     freq-=760;
     RDA_buff[2] = freq >> 2;
     RDA_buff[3] = (freq << 6) | 0x18;       //03H:CHAN = 1040-760 >>2 |03L: CHAN << 6, BAND (01) - 76-108, SPACE (00) - 100kHz
     RDA_buff[4] = 0x02; RDA_buff[5] = 0x00; //04HL
-    RDA_buff[6] = 0x88; RDA_buff[7] = 0x87; //05H:??? |05L:ANT- ON, VOL (1111) - 
+    RDA_buff[6] = 0x88; RDA_buff[7] = 0x8F; //05H:??? |05L:ANT- ON, VOL (1111) - 
     RDA_buff[8] = 0x00; RDA_buff[9] = 0x00; //06HL
     RDA_buff[10]= 0x42; RDA_buff[11]= 0x02; //07HL:???
     
