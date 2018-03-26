@@ -143,7 +143,8 @@ uint8_t main_AUX_text[17] =  {'t','e','x','t','.','t','x','t','=','"','A','U','X
 uint8_t main_VOL_text[18] = {'v','o','l','.','t','x','t','=','"','-','7','9','d','B','"',255,255,255};
 uint8_t main_VOL_mute[18] = {'v','o','l','.','t','x','t','=','"','M','U','T','E',' ','"',255,255,255};
 
-uint8_t main_USB_text[44] = {'t','e','x','t','.','t','x','t','=','"','0','0','0','/','0','0','0',' ','_','_','_','_','_','_',' ','0','0',':','0','0',' ','|','|',' ',' ','0','0',':','0','0','"',255,255,255};
+uint8_t main_USB_text[44] = {'t','e','x','t','.','t','x','t','=','"','0','0','0','/','0','0','0',' ','_','_','_','_','_','_',' ',' ',' ',' ',' ',' ',' ','|','|',' ',' ',' ',' ',' ',' ',' ','"',255,255,255};
+uint8_t main_NO_USB_text[21] = {'t','e','x','t','.','t','x','t','=','"',' ','N','O',' ','U','S','B','"',255,255,255};
     
 uint8_t main_text_font_4[14] = {'t','e','x','t','.','f','o','n','t','=','4',255,255,255};
 uint8_t main_text_font_5[14] = {'t','e','x','t','.','f','o','n','t','=','5',255,255,255};
@@ -235,8 +236,8 @@ void Init_BT(void);
 void BT_send(uint8_t query);
 
 void Init_USB(void);
-void USB_send(uint8_t CMD);
-void USB_send_par(uint8_t CMD, uint8_t PAR);
+uint8_t USB_send(uint8_t CMD);
+uint8_t USB_send_par(uint8_t CMD, uint8_t PAR);
 
 void Init_I2C1(void);
 uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size);
