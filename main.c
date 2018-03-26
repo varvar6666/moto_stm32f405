@@ -11,13 +11,31 @@ uint8_t I2C_res;
 
 uint16_t RADIO_FREQ = 1040;
 
-uint8_t BT_connected = 0;
+uint8_t BT_Status = BT_NO_DEV;
 uint8_t bt_rx_buff[BT_RX_BUFF_SIZE];
 
-uint8_t DF_play = DF_ST_NO_USB;
-uint8_t df_rx_buff[10];
+uint8_t usb_rx_buff[11];
+uint8_t usb_status = USB_PAUSE;
+uint8_t usb_play_mode  = 0;
+
+uint8_t usb_q_rsv = 1;
+
+uint8_t tr_cn[4];
+
+struct TRACK_INFO
+{
+    uint16_t count;
+    uint16_t num;
+    uint16_t time;
+    uint16_t tlong;
+    uint8_t  name[11];
+} usb_track_info;
+
+
 
 int8_t VOLUME = 15;
+
+uint8_t MUTED = 0;
 
 uint16_t ADC_Buff[ADC_BUF_NUM];
 
@@ -30,6 +48,7 @@ int main(void)
     Init_GPIO();
  
     AMP_OFF;
+    BT_OFF;
     
     FLASH->KEYR = 0x45670123;
     FLASH->KEYR = 0xCDEF89AB;	
@@ -40,8 +59,7 @@ int main(void)
     TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
    
     //-- Delay for TFT start --
-    for(uint32_t delay = 0;delay < 10000000;delay++) 
-    {};
+    for(uint32_t delay = 0;delay < 10000000;delay++){};
 
     loading_txt[8] = '2';
     loading_txt[9] = '5';
@@ -60,15 +78,17 @@ int main(void)
     TFT_send(loading_txt, sizeof(loading_txt));
     
     Init_I2C1();
-   
+        
 	Init_BT();
+
+    Init_USB();
+
+    USB_send_par(USB_CMD_SOURCE, 0x00);
+    USB_send_par(USB_CMD_VOL, 0x1e);
+    USB_send_par(USB_CMD_PLAY_MODE, 0x00);
+    //USB_send(USB_Q_STATUS);
+
 		
-/*    Init_DF();
-//	DF_send(DF_RES, 0);
-    DF_send(DF_PB_SORC, DF_USB);
-    DF_send(DF_SET_VOL,30);
-    DF_send(DF_Q_NUM_FILES, 0);
-		*/
     //STATE = AUDIO_OFF;
     STATE = (0xFF000000 & flash_read(MEM_ADDRESS)) >> 24;
     INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
@@ -93,35 +113,39 @@ int main(void)
             switch (INPUT_SEL)
             {
                 case FM:{
-                                    main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
-                                    main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
-                                    main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
-                                    main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
-                                    
-                                    TFT_send(main_FM_text, sizeof(main_FM_text));
-                                break;}
+                        main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
+                        main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
+                        main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
+                        main_FM_text[14] = (RADIO_FREQ -(RADIO_FREQ/10)*10) + 0x30;
+                        
+                        TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                        
+                        TFT_send(main_FM_text, sizeof(main_FM_text));
+                    break;}
                 case BT:{
-                                    BT_send(BT_STATUS);
-                                break;}
+                        TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                        
+                        BT_send(BT_STATUS);
+                    break;}
                 case USB:{
-                                    DF_send(DF_Q_CUR_STAT, 0);
-                                break;}
+                        TFT_send(main_text_font_5, sizeof(main_text_font_5));
+                    
+                        USB_send(USB_Q_TRACK_COUNT);
+                        USB_send(USB_Q_TRACK_NUMBER);
+                        USB_send(USB_Q_TRACK_LONG);
+                        USB_send(USB_Q_TRACK_TIME);
+                        USB_send(USB_Q_TRACK_NAME);
+                    break;}
                 case AUX:{
-                                    TFT_send(main_AUX_text, sizeof(main_AUX_text));
-                                break;}				
+                        TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                    
+                        TFT_send(main_AUX_text, sizeof(main_AUX_text));
+                    break;}				
             };
     }
 
-
-		
-	
-    NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
-//	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
     NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-	NVIC_EnableIRQ(UART5_IRQn);
-			
-		
+    
     while(1)
     {
     
@@ -226,10 +250,12 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 	
     uint8_t i2c_sel_buff[2] = {TDA_MAIN_SOURCE, TDA_SOURCE_MUTE};
 	uint8_t i2c_vol_buff[2] = {TDA_VOLUME, VOLUME};
-		
+
+    GPIOB->BSRR |= GPIO_BSRR_BR12;
 		
     if(BT_SOUCE) // source select & OFF audio
     {
+        GPIOB->BSRR |= GPIO_BSRR_BS12;
         OFF_counter++;
         if((OFF_counter >= 20)&&(STATE == MAIN))
         {
@@ -272,6 +298,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 switch (INPUT_SEL)
                 {
                     case FM:{
+                            TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                            
                             main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
                             main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
                             main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
@@ -280,14 +308,24 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                             TFT_send(main_FM_text, sizeof(main_FM_text));
                         break;}
                     case BT:{
+                            TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                            
                             BT_send(BT_STATUS);
-                            TFT_send(main_BT_text[BT_connected], sizeof(main_BT_text[BT_connected]));
+                            
+                            TFT_send(main_BT_text[BT_Status], sizeof(main_BT_text[BT_Status]));
                         break;}
                     case USB:{
-                            DF_send(DF_Q_NUM_FILES, 0);
-                            DF_send(DF_Q_CUR_FIL, 0);
+                            TFT_send(main_text_font_5, sizeof(main_text_font_5));
+                        
+                            USB_send(USB_Q_TRACK_COUNT);
+                            USB_send(USB_Q_TRACK_NUMBER);
+                            USB_send(USB_Q_TRACK_LONG);
+                            USB_send(USB_Q_TRACK_TIME);
+                            USB_send(USB_Q_TRACK_NAME);
                         break;}
                     case AUX:{
+                            TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                        
                             TFT_send(main_AUX_text, sizeof(main_AUX_text));
                         break;}
                 };
@@ -309,6 +347,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 switch (INPUT_SEL)
                 {
                     case FM:{
+                            TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                        
                             main_FM_text[10] = RADIO_FREQ/1000 + 0x30;
                             main_FM_text[11] = (RADIO_FREQ -(RADIO_FREQ/1000)*1000)/100 + 0x30;
                             main_FM_text[12] = (RADIO_FREQ -(RADIO_FREQ/100)*100)/10 + 0x30;
@@ -317,12 +357,26 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                             TFT_send(main_FM_text, sizeof(main_FM_text));
                         break;}
                     case BT:{
+                            TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                        
                             BT_send(BT_STATUS);
-                            TFT_send(main_BT_text[BT_connected], sizeof(main_BT_text[BT_connected]));
+                        
+                            TFT_send(main_BT_text[BT_Status], sizeof(main_BT_text[BT_Status]));
                         break;}
                     case USB:{
-                            DF_send(DF_Q_CUR_FIL, 0);
-                        break;}								
+                            TFT_send(main_text_font_5, sizeof(main_text_font_5));
+                        
+                            USB_send(USB_Q_TRACK_COUNT);
+                            USB_send(USB_Q_TRACK_NUMBER);
+                            USB_send(USB_Q_TRACK_LONG);
+                            USB_send(USB_Q_TRACK_TIME);
+                            USB_send(USB_Q_TRACK_NAME);
+                        break;}
+                    case AUX:{
+                            TFT_send(main_text_font_7, sizeof(main_text_font_7));
+                        
+                            TFT_send(main_AUX_text, sizeof(main_AUX_text));
+                        break;}
                 };
 
                 main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
@@ -338,6 +392,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     
     if(BT_NEXT) // increase
     {
+        GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {				
             switch (INPUT_SEL)
@@ -360,9 +415,12 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         BT_send(BT_FORWARD);
                     break;}
                 case USB:{
-                        DF_send(DF_NEXT,0);
-                        DF_send(DF_Q_CUR_FIL,0);
-                        DF_send(DF_Q_CUR_STAT,0);
+                        USB_send(USB_CMD_NEXT);
+                        
+                        USB_send(USB_Q_TRACK_NUMBER);
+                        USB_send(USB_Q_TRACK_LONG);
+                        USB_send(USB_Q_TRACK_TIME);
+                        USB_send(USB_Q_TRACK_NAME);
                     break;}
             
             }
@@ -371,6 +429,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
     if(BT_PP) // play/pause
     {
+        GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {				
             switch (INPUT_SEL)
@@ -379,19 +438,49 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         BT_send(BT_PLAY_PAUSE);
                     break;}
                 case USB:{
-                        if (DF_play != DF_ST_NO_USB)
-                        {
-                            if(DF_play == DF_ST_PLAY)
-                                DF_send(DF_PAUSE, 0);
-                            if(DF_play == DF_ST_STOP)
-                                DF_send(DF_RND_PLAY, 1);
-                            if(DF_play == DF_ST_PAUSE)
-                                DF_send(DF_PLAY, 0);
-
-                            DF_send(DF_Q_CUR_FIL,0);
-                        }
-                        DF_send(DF_Q_CUR_STAT,0);
+                    if(usb_status == USB_PLAY)
+                    {
+                        USB_send(USB_CMD_PAUSE);
+                        usb_status = USB_PAUSE;
+                        
+                        main_USB_text[32] = '|';
+                        
+                        TFT_send(main_USB_text, sizeof(main_USB_text));
+                    }
+                    else
+                    {
+                        USB_send(USB_CMD_PLAY);
+                        usb_status = USB_PLAY;
+                        
+                        main_USB_text[32] = '>';
+                        
+                        TFT_send(main_USB_text, sizeof(main_USB_text));
+                    }
+                    
                     break;}
+                case FM:
+                case AUX:{
+                        if(MUTED)
+                        {
+                            MUTED = 0;
+                            
+                            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+                            i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+                            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                            
+                            TFT_send(main_VOL_text, sizeof(main_VOL_text));
+                        }
+                        else
+                        {
+                            MUTED = 1;
+                            
+                            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+                            i2c_sel_buff[1] = TDA_SOURCE_MUTE;
+                            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                            
+                            TFT_send(main_VOL_mute, sizeof(main_VOL_mute));
+                        }
+                         }
 
             };
         }
@@ -399,6 +488,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     
     if(BT_PREV) // decrease
     {
+        GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {				
             switch (INPUT_SEL)
@@ -421,9 +511,12 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         BT_send(BT_BACKWARD);
                     break;}
                 case USB:{
-                        DF_send(DF_PREW,0);
-                        DF_send(DF_Q_CUR_FIL,0);
-                        DF_send(DF_Q_CUR_STAT,0);
+                        USB_send(USB_CMD_PREV);
+
+                        USB_send(USB_Q_TRACK_NUMBER);
+                        USB_send(USB_Q_TRACK_LONG);
+                        USB_send(USB_Q_TRACK_TIME);
+                        USB_send(USB_Q_TRACK_NAME);
                     break;}
             }
         }
@@ -431,11 +524,17 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     
     if(BT_VOL_UP) // increase volume
     {
+        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        MUTED = 0;
         VOLUME++;
         if(VOLUME > 15) VOLUME = 15;
         
         flash_write_newdata();
 
+        i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+        i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+        
         i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
         I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
 
@@ -449,11 +548,17 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     
     if(BT_VOL_DOWN) // decrease volume
     {
+        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        MUTED = 0;
         VOLUME--;
         if(VOLUME < -79) VOLUME = -79;
         
         flash_write_newdata();
-
+        
+        i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+        i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+        
         i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
         I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
 
@@ -462,11 +567,6 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
         main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
         
         TFT_send(main_VOL_text, sizeof(main_VOL_text));
-    }
-    
-    if(GPIOC->IDR & GPIO_PIN_1)
-    {
-        DF_send(DF_Q_CUR_STAT,0);
     }
     
     if(BT_CLK_UP) // Clock button for increase value
@@ -630,6 +730,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     if(((STATE == MAIN)||(STATE == AUDIO_OFF))&&(delay_send >= 100))
     {
 		delay_send = 0;
+        
+        BT_send(BT_STATUS);
+        
         TFT_TIME[14] = ((RTC->TR & RTC_TR_MNU_Msk)>> RTC_TR_MNU_Pos)+ 0x30; // minute
         TFT_TIME[13] = ((RTC->TR & RTC_TR_MNT_Msk)>> RTC_TR_MNT_Pos)+ 0x30;
         
@@ -649,17 +752,16 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
         TFT_send(TFT_TIME, sizeof(TFT_TIME));
 
-        if((INPUT_SEL == BT)&&(BT_connected == 0))
-            BT_send(BT_STATUS); 
+       /* if((INPUT_SEL == BT)&&(BT_connected == 0))
+            BT_send(BT_STATUS);
         if((INPUT_SEL == USB)&&(DF_play == DF_ST_NO_USB))
-            DF_send(DF_Q_CUR_STAT, 0);
+            DF_send(DF_Q_CUR_STAT, 0);*/
     }
 
 }
 
 void DMA1_Stream0_IRQHandler(void)
 {
-	static uint8_t bt_inc = 0;
 	DMA1->LIFCR = DMA_LIFCR_CTCIF0 |
                   DMA_LIFCR_CHTIF0 | 
                   DMA_LIFCR_CFEIF0 |
@@ -669,7 +771,33 @@ void DMA1_Stream0_IRQHandler(void)
 	DMA1_Stream0->M0AR = (uint32_t) bt_rx_buff;
 	DMA1_Stream0->NDTR = BT_RX_BUFF_SIZE;
 	DMA1_Stream0->CR |= DMA_SxCR_EN;
-	
+    
+    if((bt_rx_buff[0] == 13)&&(bt_rx_buff[1] == 10))
+	{
+        switch(bt_rx_buff[3])
+        {
+            case 'I':{
+                        BT_Status = BT_NO_DEV;
+                    break;}
+            case 'U':{
+                        if(bt_rx_buff[4] == '1')
+                            BT_Status = BT_NO_DEV;
+                        else if(((bt_rx_buff[4] == '3')||(bt_rx_buff[4] == '5'))&&(BT_Status == BT_NO_DEV))
+                            BT_Status = BT_CONN;
+                    break;}
+            case 'P':{
+                        if (BT_Status == BT_PLAY)
+                            BT_Status = BT_PAUSE;
+                    break;}
+            case 'R':{
+                        BT_Status = BT_PLAY;
+                    break;}
+        
+        };
+        if ((STATE == MAIN) && (INPUT_SEL == BT))
+            TFT_send(main_BT_text[BT_Status],sizeof(main_BT_text[BT_Status]));
+    }
+/*	
 	if ((STATE == MAIN) && (INPUT_SEL == BT))
 	{
 		if((bt_rx_buff[0] == 13)&&(bt_rx_buff[1] == 10))
@@ -736,73 +864,92 @@ void DMA1_Stream0_IRQHandler(void)
 			}
 		}
 	
-	}
+	}*/
 		
 }
 
-void DMA1_Stream1_IRQHandler(void)
+/*void DMA1_Stream2_IRQHandler(void)
 {
-	DMA1->LIFCR = DMA_LIFCR_CTCIF0 |
-                DMA_LIFCR_CHTIF0 | 
-                DMA_LIFCR_CFEIF0 |
-                DMA_LIFCR_CTEIF0 |
-								DMA_LIFCR_CDMEIF0;
+	DMA1->LIFCR = DMA_LIFCR_CTCIF2 |
+                  DMA_LIFCR_CHTIF2 | 
+                  DMA_LIFCR_CFEIF2 |
+                  DMA_LIFCR_CTEIF2 |
+				  DMA_LIFCR_CDMEIF2;
 	
-	DMA1_Stream0->CR |= DMA_SxCR_EN;
-	
-	if ((df_rx_buff[0] == 0x7E)&&(df_rx_buff[1] == 0xFF))
-	{
-		if(df_rx_buff[3] == DF_Q_NUM_FILES)
-		{
-				main_DF_text[0][19] =  df_rx_buff[6]/100 + 0x30;
-				main_DF_text[0][20] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[0][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
-				main_DF_text[1][19] =  df_rx_buff[6]/100 + 0x30;
-				main_DF_text[1][20] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[1][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
-				main_DF_text[2][19] =  df_rx_buff[6]/100 + 0x30;
-				main_DF_text[2][20] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[2][21] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;;
-		}
+	//DMA1_Stream2->CR &= ~DMA_SxCR_EN;
+    usb_q_rsv = 1;
+    
+    switch(USB_command[2])
+    {
+        case USB_Q_FILE_COUNT:{
+            usb_track_info.count = ((usb_rx_buff[0] - ((usb_rx_buff[0] >= 0x61)? 0x57:0x30)) << 16) |
+                                   ((usb_rx_buff[1] - ((usb_rx_buff[1] >= 0x61)? 0x57:0x30)) << 8) |
+                                   ((usb_rx_buff[2] - ((usb_rx_buff[2] >= 0x61)? 0x57:0x30)) << 4) |
+                                    (usb_rx_buff[3] - ((usb_rx_buff[3] >= 0x61)? 0x57:0x30));
+            
+            main_USB_text[14] =  usb_track_info.count/100 + 0x30;
+            main_USB_text[15] = (usb_track_info.count -(usb_track_info.count/100)*100)/10 + 0x30;
+            main_USB_text[16] = (usb_track_info.count -(usb_track_info.count/10)*10) + 0x30;
+            
+            break;}
+        case USB_Q_TRACK_NUMBER:{
+            usb_track_info.num = ((usb_rx_buff[0] - ((usb_rx_buff[0] >= 0x61)? 0x57:0x30)) << 16) |
+                                 ((usb_rx_buff[1] - ((usb_rx_buff[1] >= 0x61)? 0x57:0x30)) << 8) |
+                                 ((usb_rx_buff[2] - ((usb_rx_buff[2] >= 0x61)? 0x57:0x30)) << 4) |
+                                  (usb_rx_buff[3] - ((usb_rx_buff[3] >= 0x61)? 0x57:0x30));
+            
+            main_USB_text[10] =  usb_track_info.num/100 + 0x30;
+            main_USB_text[11] = (usb_track_info.num -(usb_track_info.num/100)*100)/10 + 0x30;
+            main_USB_text[12] = (usb_track_info.num -(usb_track_info.num/10)*10) + 0x30;
+            
+            break;}
+        case USB_Q_TRACK_LONG:{
+            usb_track_info.tlong = ((usb_rx_buff[0] - ((usb_rx_buff[0] >= 0x61)? 0x57:0x30)) << 16) |
+                                   ((usb_rx_buff[1] - ((usb_rx_buff[1] >= 0x61)? 0x57:0x30)) << 8) |
+                                   ((usb_rx_buff[2] - ((usb_rx_buff[2] >= 0x61)? 0x57:0x30)) << 4) |
+                                    (usb_rx_buff[3] - ((usb_rx_buff[3] >= 0x61)? 0x57:0x30));
+            
+            main_USB_text[35] =  (usb_track_info.tlong/60)/10 + 0x30;
+            main_USB_text[36] = ((usb_track_info.tlong/60) -((usb_track_info.tlong/60)/10)*10) + 0x30;
+            main_USB_text[38] =  (usb_track_info.tlong-((usb_track_info.tlong/60)*60))/10 + 0x30;
+            main_USB_text[39] = ((usb_track_info.tlong-((usb_track_info.tlong/60)*60)) -((usb_track_info.tlong-((usb_track_info.tlong/60)*60))/10)*10) + 0x30;                
+            
+            break;}
+        case USB_Q_TRACK_TIME:{
+            usb_track_info.time = ((usb_rx_buff[0] - ((usb_rx_buff[0] >= 0x61)? 0x57:0x30)) << 16) |
+                                  ((usb_rx_buff[1] - ((usb_rx_buff[1] >= 0x61)? 0x57:0x30)) << 8) |
+                                  ((usb_rx_buff[2] - ((usb_rx_buff[2] >= 0x61)? 0x57:0x30)) << 4) |
+                                   (usb_rx_buff[3] - ((usb_rx_buff[3] >= 0x61)? 0x57:0x30));
+            
+            main_USB_text[25] =  (usb_track_info.time/60)/10 + 0x30;
+            main_USB_text[26] = ((usb_track_info.time/60) -((usb_track_info.time/60)/10)*10) + 0x30;
+            main_USB_text[28] =  (usb_track_info.time-((usb_track_info.time/60)*60))/10 + 0x30;
+            main_USB_text[29] = ((usb_track_info.time-((usb_track_info.time/60)*60)) -((usb_track_info.time-((usb_track_info.time/60)*60))/10)*10) + 0x30;            
+            
+            break;}
+        case USB_Q_TRACK_NAME:{
+            memcpy((void*)usb_track_info.name, usb_rx_buff,11);
+            
+            main_USB_text[18] = usb_track_info.name[0];
+            main_USB_text[19] = usb_track_info.name[1];
+            main_USB_text[20] = usb_track_info.name[2];
+            main_USB_text[21] = usb_track_info.name[3];
+            main_USB_text[22] = usb_track_info.name[4];
+            main_USB_text[23] = usb_track_info.name[5];
 
-		if(df_rx_buff[3] == DF_Q_CUR_FIL)
-		{
-				main_DF_text[0][15] =  df_rx_buff[6]/100 + 0x30;
-				main_DF_text[0][16] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[0][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
-				main_DF_text[1][15] =  df_rx_buff[6]/100 + 0x30;
-				main_DF_text[1][16] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[1][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;
-				main_DF_text[2][15] =  df_rx_buff[6]/100 + 0x30;
-				main_DF_text[2][16] = (df_rx_buff[6] -(df_rx_buff[6]/100)*100)/10 + 0x30;
-				main_DF_text[2][17] = (df_rx_buff[6] -(df_rx_buff[6]/10)*10) + 0x30;			
-		}
-		
-		if(df_rx_buff[3] == DF_Q_CUR_STAT)
-		{
-			DF_play = df_rx_buff[6];
-		}
-		
-		if((df_rx_buff[3] == 0x40)||(df_rx_buff[3] == 0x3B))
-			DF_play = DF_ST_NO_USB;
+            if((STATE == MAIN)&&(INPUT_SEL == USB))
+            {
+                TFT_send(main_USB_text, sizeof(main_USB_text));
+            }            
+            
+            break;}
+    
+    
+    };
+    
 
-		if(df_rx_buff[3] == 0x3A)
-		{
-			DF_play = DF_ST_STOP;
-		}
-		if ((STATE == MAIN) && (INPUT_SEL == USB))
-		{
-			if(DF_play == DF_ST_NO_USB)
-			{
-				TFT_send(main_DF_text_no, sizeof(main_DF_text_no));
-			}
-			else
-			{
-				TFT_send(main_DF_text[DF_play], sizeof(main_DF_text[DF_play]));
-			}
-		}
-	}
-}
+    
+}*/
 
 void DMA2_Stream0_IRQHandler(void)
 {
@@ -811,8 +958,8 @@ void DMA2_Stream0_IRQHandler(void)
                    DMA_LIFCR_CTEIF0 |
                    DMA_LIFCR_CHTIF0 |
                    DMA_LIFCR_CTCIF0;
-	uint8_t V_IN = (ADC_Buff[0]*159)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
-	uint8_t P_IN = (ADC_Buff[1]*159)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
+	uint8_t V_IN = (ADC_Buff[0]*158)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
+	uint8_t P_IN = (ADC_Buff[1]*158)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
     
     ADC_text[9]  =  V_IN/100 + 0x30;
     ADC_text[10] = (V_IN -(V_IN/100)*100)/10 + 0x30;
@@ -837,6 +984,18 @@ void UART5_IRQHandler(void)
 	}
 }
 
+/*void UART4_IRQHandler(void)
+{
+	if(UART4->SR & USART_SR_IDLE)
+	{
+		volatile uint32_t tmp;
+		tmp = UART4->SR;
+		tmp = UART4->DR;
+		(void)tmp;
+		DMA1_Stream2->CR &= ~DMA_SxCR_EN;
+	}
+}*/
+
 void Init_GPIO(void)
 {
     RCC-> AHB1ENR |= RCC_AHB1ENR_GPIOAEN |
@@ -858,10 +1017,14 @@ void Init_GPIO(void)
     GPIOC->MODER |= GPIO_MODE_OUTPUT_PP << PIN13*2;
     
     //Set GPIOA PIN0 as usart4 TX <===> DF
-    GPIOA->AFR[0] |= GPIO_AF8_UART4 << PIN0*4;
-    GPIOA->PUPDR |= GPIO_PULLUP << PIN0*2;
-    GPIOA->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN0*2;
-    GPIOA->MODER |= GPIO_MODE_AF_PP << PIN0*2;
+    GPIOA->AFR[0] |= GPIO_AF8_UART4 << PIN0*4 |
+                     GPIO_AF8_UART4 << PIN1*4;
+    GPIOA->PUPDR |= GPIO_PULLUP << PIN0*2 |
+                    GPIO_PULLUP << PIN1*2;
+    GPIOA->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN0*2 |
+                      GPIO_SPEED_FREQ_VERY_HIGH << PIN1*2;
+    GPIOA->MODER |= GPIO_MODE_AF_PP << PIN0*2 |
+                    GPIO_MODE_AF_PP << PIN1*2;
     
 	//Set GPIOB PIN10 as usart3 TX & PIN11 as usart3 RX <===> TFT
     GPIOB->AFR[1] |= GPIO_AF7_USART3 << (PIN10*4-32) |
@@ -972,7 +1135,7 @@ void Init_BT(void)
 {
     //MX_USART3_UART_Init();
     RCC->APB1ENR |= RCC_APB1ENR_UART5EN;
-    UART5->BRR = APB1/115200;
+    UART5->BRR = APB1/921600;
     UART5->CR1 = USART_CR1_UE | 
                  USART_CR1_TE | 
                  USART_CR1_RE |
@@ -989,15 +1152,16 @@ void Init_BT(void)
     DMA1_Stream0->NDTR = BT_RX_BUFF_SIZE;
     DMA1_Stream0->CR |= DMA_SxCR_EN;
     
-    DMA1_Stream7->CR = DMA_SxCR_DIR_0 |  //=> S4
+    DMA1_Stream7->CR &= ~DMA_SxCR_EN;
+    DMA1_Stream7->CR = DMA_SxCR_DIR_0 |
                        DMA_SxCR_MINC |
                        DMA_SxCR_CHSEL_2;
     DMA1_Stream7->PAR = (uint32_t) &UART5->DR;
-/*		DMA1_Stream3->M0AR = (uint32_t) bt_tx_query[BT_RESET];
-		DMA1_Stream3->NDTR = 7;
-		DMA1_Stream3->CR |= DMA_SxCR_EN;*/
         
     BT_ON;
+    
+	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+	NVIC_EnableIRQ(UART5_IRQn);
 }
 
 void BT_send(uint8_t query)
@@ -1006,63 +1170,106 @@ void BT_send(uint8_t query)
                   DMA_HIFCR_CHTIF7 | 
                   DMA_HIFCR_CFEIF7 |
                   DMA_HIFCR_CTEIF7;	
-
-    for(uint32_t delay = 0;delay < 100000;delay++){};
         
     DMA1_Stream7->M0AR = (uint32_t) bt_tx_query[query];
     DMA1_Stream7->NDTR = 7;
     DMA1_Stream7->CR |= DMA_SxCR_EN;
 }
 
-void Init_DF(void)
+void Init_USB(void)
 {
-	RCC->APB1ENR |= RCC_APB1ENR_UART5EN;
+    RCC->APB1ENR |= RCC_APB1ENR_UART4EN;
     
-    UART5->BRR = APB1/9600;
-    UART5->CR1 = USART_CR1_UE |
+    UART4->BRR = APB1/9600;
+    UART4->CR1 = USART_CR1_UE |
                  USART_CR1_TE |
 				 USART_CR1_RE;
-    UART5->CR3 = USART_CR3_DMAT|
-                 USART_CR3_DMAR;
-	
-    DMA1_Stream7->CR = DMA_SxCR_DIR_0 |
-                       DMA_SxCR_MINC |
-                       DMA_SxCR_CHSEL_2;
-    DMA1_Stream7->PAR = (uint32_t) &UART5->DR;
-    DMA1_Stream7->M0AR = (uint32_t) DF_data;
-    DMA1_Stream7->NDTR = 10;
-
-    DMA1_Stream0->CR = DMA_SxCR_CIRC |	
-                       DMA_SxCR_MINC |
-                       DMA_SxCR_TCIE |
-                       DMA_SxCR_CHSEL_2;
-    DMA1_Stream0->PAR = (uint32_t) &UART5->DR;
-    DMA1_Stream0->M0AR = (uint32_t) df_rx_buff;
-    DMA1_Stream0->NDTR = 10;
-    DMA1_Stream0->CR |= DMA_SxCR_EN;
 }
 
-void DF_send(uint8_t CMD, uint8_t PAR)
+void USB_send(uint8_t CMD)
 {
-	DMA1->HIFCR = DMA_HIFCR_CTCIF7 |
-									DMA_HIFCR_CHTIF7 | 
-									DMA_HIFCR_CFEIF7 |
-									DMA_HIFCR_CTEIF7;
-
-	for(uint32_t delay = 0;delay < 1000000;delay++){};
-			
-	DF_data[3] = CMD;
-    DF_data[6] = PAR;
-		
-	uint16_t sum = 0 - (DF_data[1] + DF_data[2] + DF_data[3] + DF_data[4] + DF_data[5] + DF_data[6]);
+    uint8_t tmp;
+    USB_command[2] = CMD;
     
-    DF_data[7] = ((sum & 0xFF00) >> 8);
-    DF_data[8] = sum & 0xFF;	
+    for(uint8_t i = 0;i<4;i++)
+    {
+        while(!(UART4->SR & USART_SR_TC));
+        UART4->DR = USB_command[i];
+    }
+    
+    if(CMD == USB_Q_TRACK_COUNT)
+    {
+        for(uint8_t i = 4;i>0;i--)
+        {
+            while(!(UART4->SR & USART_SR_RXNE));
+            tmp = UART4->DR;
+            usb_track_info.count |= ((tmp - ((tmp >= 0x61)? 0x57:0x30)) << ((i-1)*4));
+        }
+    }
+    if(CMD == USB_Q_TRACK_NUMBER)
+    {
+        for(uint8_t i = 4;i>0;i--)
+        {
+            while(!(UART4->SR & USART_SR_RXNE));
+            tmp = UART4->DR;
+            usb_track_info.num |= ((tmp - ((tmp >= 0x61)? 0x57:0x30)) << ((i-1)*4));
+        }
+    }
+    if(CMD == USB_Q_TRACK_LONG)
+    {
+        for(uint8_t i = 4;i>0;i--)
+        {
+            while(!(UART4->SR & USART_SR_RXNE));
+            tmp = UART4->DR;
+            usb_track_info.tlong |= ((tmp - ((tmp >= 0x61)? 0x57:0x30)) << ((i-1)*4));
+        }
+    }
+    if(CMD == USB_Q_TRACK_TIME)
+    {
+        for(uint8_t i = 4;i>0;i--)
+        {
+            while(!(UART4->SR & USART_SR_RXNE));
+            tmp = UART4->DR;
+            usb_track_info.time |= ((tmp - ((tmp >= 0x61)? 0x57:0x30)) << ((i-1)*4));
+        }
+    }
+    if(CMD == USB_Q_TRACK_NAME)
+    {
+        for(uint8_t i = 0;i<11;i++)
+        {
+            while(!(UART4->SR & USART_SR_RXNE));
+            tmp = UART4->DR;
+            usb_track_info.name[i] = tmp;
+        }
+    }
+    
+    for(uint32_t i = 0;i<2500000;i++){};
+}
 
-	DMA1_Stream7->NDTR = 10;
-    DMA1_Stream7->CR |= DMA_SxCR_EN;
-		
-		//while(DMA1_Stream7->NDTR != 0){};
+void USB_send_par(uint8_t CMD, uint8_t PAR)
+{
+    USB_command5[2] = CMD;
+    USB_command5[3] = PAR;
+    
+    for(uint8_t i = 0;i<5;i++)
+    {
+        while(!(UART4->SR & USART_SR_TXE));
+        UART4->DR = USB_command5[i];
+    }
+    
+    if(CMD == USB_CMD_SOURCE)
+        for(uint8_t i = 0;i<5;i++)
+        {
+            while(!(UART4->SR & USART_SR_RXNE));
+            uint8_t tmp = UART4->DR;
+        }
+    else
+        for(uint8_t i = 0;i<2;i++)
+        {
+            while(!(UART4->SR & USART_SR_RXNE));
+            uint8_t tmp = UART4->DR;
+        }
+    for(uint32_t i = 0;i<5000000;i++){};
 }
 
 void Init_KEYs_TIM(void)
@@ -1072,6 +1279,8 @@ void Init_KEYs_TIM(void)
     TIM14->ARR = 2000-1;
     TIM14->DIER = TIM_DIER_UIE;
     TIM14->CR1 = TIM_CR1_CEN; 
+    
+    NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);			
 }
 
 void Init_I2C1(void)

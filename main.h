@@ -78,6 +78,10 @@ enum INPUTs
 #define TDA_MAIN_SOURCE		0x00
 #define TDA_SOURCE_MUTE		0x07
 
+#define TDA_SOFT_MUTE       0x02
+#define TDA_MUTE            0xC6
+#define TDA_UNMUTE          0xC7
+
 #define TDA_VOLUME				0x03
 
 //const uint8_t TDA_inputs[4] = {0x82, 0x84, 0x81, 0x83};
@@ -128,19 +132,22 @@ uint8_t day_of_week[7][9] = {"Monday   ",
                              "Saturday ",
                              "Sunday   "};
 
-uint8_t main_FM_text[22] = 		 {'t','e','x','t','.','t','x','t','=','"','0','0','0','.','0',' ','F','M','"',255,255,255};
-uint8_t main_BT_text[4][22] = {{'t','e','x','t','.','t','x','t','=','"','N','O',' ','C','O','N','N',' ','"',255,255,255},
-															 {'t','e','x','t','.','t','x','t','=','"','C','O','N','N','E','C','T',' ','"',255,255,255},
-															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','L','A','Y',' ',' ','"',255,255,255},
-															 {'t','e','x','t','.','t','x','t','=','"',' ',' ','P','A','U','S','E',' ','"',255,255,255}};
-uint8_t main_DF_text[3][32] = {{'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','S','T','O','P',' ','"',255,255,255},
-															 {'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','L','A','Y',' ','"',255,255,255},
-															 {'t','e','x','t','.','t','x','t','=','"','s','o','n','g',' ','0','0','0','/','0','0','0',' ','P','A','U','S','E','"',255,255,255}};
-uint8_t main_DF_text_no[21] =  {'t','e','x','t','.','t','x','t','=','"','N','O',' ',' ','U','S','B','"',255,255,255};
+uint8_t main_FM_text[22] = 	   {'t','e','x','t','.','t','x','t','=','"','0','0','0','.','0',' ','F','M','"',255,255,255};
+uint8_t main_BT_text[4][21] = {{'t','e','x','t','.','t','x','t','=','"',' ','N','O',' ','D','e','v','"',255,255,255},
+							   {'t','e','x','t','.','t','x','t','=','"','C','o','n','n','e','c','t','"',255,255,255},
+							   {'t','e','x','t','.','t','x','t','=','"',' ','P','L','A','Y',' ',' ','"',255,255,255},
+							   {'t','e','x','t','.','t','x','t','=','"',' ','P','A','U','S','E',' ','"',255,255,255}};
 
 uint8_t main_AUX_text[17] =  {'t','e','x','t','.','t','x','t','=','"','A','U','X','"',255,255,255};
-	
+
 uint8_t main_VOL_text[18] = {'v','o','l','.','t','x','t','=','"','-','7','9','d','B','"',255,255,255};
+uint8_t main_VOL_mute[18] = {'v','o','l','.','t','x','t','=','"','M','U','T','E',' ','"',255,255,255};
+
+uint8_t main_USB_text[44] = {'t','e','x','t','.','t','x','t','=','"','0','0','0','/','0','0','0',' ','_','_','_','_','_','_',' ','0','0',':','0','0',' ','|','|',' ',' ','0','0',':','0','0','"',255,255,255};
+    
+uint8_t main_text_font_4[14] = {'t','e','x','t','.','f','o','n','t','=','4',255,255,255};
+uint8_t main_text_font_5[14] = {'t','e','x','t','.','f','o','n','t','=','5',255,255,255};
+uint8_t main_text_font_7[14] = {'t','e','x','t','.','f','o','n','t','=','7',255,255,255};
 	
 uint8_t ADC_text[25] = {'A','D','C','.','t','x','t','=','"','0','0','.','0','V',' ',' ','0','0','.','0','V','"',255,255,255};
 																 
@@ -154,73 +161,60 @@ enum BT_querys
     BT_PLAY_PAUSE,
     BT_FORWARD,
     BT_BACKWARD,
-	BT_DISC,
-	BT_RESET
+	BT_DISC
 };
-uint8_t bt_tx_query[6][7] = {{'A','T','#','M','V',13,10},
-														 {'A','T','#','M','A',13,10},
-														 {'A','T','#','M','D',13,10},
-														 {'A','T','#','M','E',13,10},
-														 {'A','T','#','M','J',13,10},
-														 {'A','T','#','C','Z',13,10}};											 
-/*--------------------------------------------------------------------------------*/
-//DF Serial Control CMD
-#define DF_NEXT    0x01
-#define DF_PREW    0x02
-#define DF_TRACK   0x03
-#define DF_INC_VOL 0x04
-#define DF_DEC_VOL 0x05
-#define DF_SET_VOL 0x06
-#define DF_EQ      0x07
-#define DF_PB_MODE 0x08
-#define DF_PB_SORC 0x09
-#define DF_STBY    0x0A
-#define DF_NORM    0x0B
-#define DF_RES     0x0C
-#define DF_PLAY    0x0D
-#define DF_PAUSE   0x0E
-#define DF_FOLDER  0x0F
-#define DF_VOL_ADJ 0x10
-														 
-#define DF_LOOP_PLAY   0x11
-#define DF_RND_PLAY    0x18
-//#define DF_PAUSE   		 0x1A
-
-
-//DF Serial Query Cmd
-#define DF_Q_NUM_FILES	0x47
-#define DF_Q_CUR_FIL		0x4C
-#define DF_Q_CUR_STAT		0x42
-#define DF_Q_CUR_PBM		0x45
-
-//Play Mode
-#define DF_REP_ALL 0
-#define DF_REP_FLD 1
-#define DF_REP_SIN 2
-#define DF_RANDOM  3
-
-//Play Source
-#define DF_USB     1
-
-enum DF_status
+uint8_t bt_tx_query[5][7] = {{'A','T','#','M','V',13,10},
+                             {'A','T','#','M','A',13,10},
+                             {'A','T','#','M','D',13,10},
+                             {'A','T','#','M','E',13,10},
+                             {'A','T','#','M','J',13,10}};
+enum BT_Statuses
 {
-    DF_ST_STOP=0,
-    DF_ST_PLAY,
-    DF_ST_PAUSE,
-	DF_ST_NO_USB
+    BT_NO_DEV=0,
+    BT_CONN,
+    BT_PLAY,
+    BT_PAUSE
 };
 
-uint8_t DF_data[10] = {0x7E, 0xFF, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF};
+/*--------------------------------------------------------------------------------*/
+
+#define USB_CMD_NEXT        0x01
+#define USB_CMD_PREV        0x02
+#define USB_CMD_VOL         0x06
+#define USB_CMD_SOURCE      0x09
+#define USB_CMD_RESET       0x0C
+#define USB_CMD_PLAY        0x0D
+#define USB_CMD_PAUSE       0x0E
+#define USB_CMD_PLAY        0x0D
+#define USB_CMD_PLAY_MODE   0x11
+
+#define USB_Q_STATUS        0x42
+#define USB_Q_PLAY_MODE     0x45
+#define USB_Q_TRACK_COUNT   0x48
+#define USB_Q_TRACK_NUMBER  0x4C
+#define USB_Q_TRACK_LONG    0x51
+#define USB_Q_TRACK_TIME    0x50
+#define USB_Q_TRACK_NAME    0x52
+
+enum USB_Statuses
+{
+    USB_PAUSE=0,
+    USB_PLAY
+};
+
+uint8_t USB_command[4]  = {0x7E, 0x02, 0, 0xEF};
+uint8_t USB_command5[5] = {0x7E, 0x03, 0, 0, 0xEF};
 
 /*--------------------------------------------------------------------------------*/
 //ADC
 #define ADC_BUF_NUM 2
 /*--------------------------------------------------------------------------------*/
 void TIM8_TRG_COM_TIM14_IRQHandler(void);
-void DMA1_Stream1_IRQHandler(void);
+//void DMA1_Stream2_IRQHandler(void);
 void DMA1_Stream0_IRQHandler(void);
 void DMA2_Stream0_IRQHandler(void);
-void UART5_IRQHandler(void);	
+void UART5_IRQHandler(void);
+//void UART4_IRQHandler(void);
                                 
 void Init_RCC(void);
 void SysTick_Handler(void);
@@ -240,8 +234,9 @@ void Init_KEYs_TIM(void);
 void Init_BT(void);
 void BT_send(uint8_t query);
 
-void Init_DF(void);
-void DF_send(uint8_t CMD, uint8_t PAR);
+void Init_USB(void);
+void USB_send(uint8_t CMD);
+void USB_send_par(uint8_t CMD, uint8_t PAR);
 
 void Init_I2C1(void);
 uint8_t I2C1_Send(uint8_t addres,uint8_t *buff, uint16_t size);
