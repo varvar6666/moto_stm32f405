@@ -303,8 +303,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 			delay_send = 100;
 					
 			BT_send(BT_DISC);
+            USB_send(USB_CMD_PAUSE);
             AMP_OFF;
-            /* ADD stop players  */
         }
     }
     else
@@ -382,6 +382,12 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                             main_USB_text[21] = usb_track_info.name[3];
                             main_USB_text[22] = usb_track_info.name[4];
                             main_USB_text[23] = usb_track_info.name[5];
+                            
+                            main_USB_text[30] = 'P';
+                            main_USB_text[31] = 'A';
+                            main_USB_text[32] = 'U';
+                            main_USB_text[33] = 'S';
+                            main_USB_text[34] = 'E';
                         
                             TFT_send(main_USB_text, sizeof(main_USB_text));
                         }
@@ -464,6 +470,12 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                             main_USB_text[21] = usb_track_info.name[3];
                             main_USB_text[22] = usb_track_info.name[4];
                             main_USB_text[23] = usb_track_info.name[5];
+                            
+                            main_USB_text[30] = 'P';
+                            main_USB_text[31] = 'A';
+                            main_USB_text[32] = 'U';
+                            main_USB_text[33] = 'S';
+                            main_USB_text[34] = 'E';
                         
                             TFT_send(main_USB_text, sizeof(main_USB_text));
                         }
@@ -539,7 +551,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         main_USB_text[22] = usb_track_info.name[4];
                         main_USB_text[23] = usb_track_info.name[5];
                         
-                        main_USB_text[32] = '>';
+                        main_USB_text[30] = 'P';
+                        main_USB_text[31] = 'L';
+                        main_USB_text[32] = 'A';
+                        main_USB_text[33] = 'Y';
+                        main_USB_text[34] = ' ';
                     
                         TFT_send(main_USB_text, sizeof(main_USB_text));
                     break;}
@@ -564,7 +580,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         USB_send(USB_CMD_PAUSE);
                         usb_status = USB_PAUSE;
                         
-                        main_USB_text[32] = '|';
+                        main_USB_text[30] = 'P';
+                        main_USB_text[31] = 'A';
+                        main_USB_text[32] = 'U';
+                        main_USB_text[33] = 'S';
+                        main_USB_text[34] = 'E';
                         
                         TFT_send(main_USB_text, sizeof(main_USB_text));
                     }
@@ -573,7 +593,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         USB_send(USB_CMD_PLAY);
                         usb_status = USB_PLAY;
                         
-                        main_USB_text[32] = '>';
+                        main_USB_text[30] = 'P';
+                        main_USB_text[31] = 'L';
+                        main_USB_text[32] = 'A';
+                        main_USB_text[33] = 'Y';
+                        main_USB_text[34] = ' ';
                         
                         TFT_send(main_USB_text, sizeof(main_USB_text));
                     }
@@ -660,7 +684,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         main_USB_text[22] = usb_track_info.name[4];
                         main_USB_text[23] = usb_track_info.name[5];
                         
-                        main_USB_text[32] = '>';
+                        main_USB_text[30] = 'P';
+                        main_USB_text[31] = 'L';
+                        main_USB_text[32] = 'A';
+                        main_USB_text[33] = 'Y';
+                        main_USB_text[34] = ' ';
                     
                         TFT_send(main_USB_text, sizeof(main_USB_text));
                     break;}
