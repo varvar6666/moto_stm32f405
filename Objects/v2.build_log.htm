@@ -28,15 +28,15 @@ Project File Date:  03/26/2018
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'Target 1'
 compiling main.c...
-main.c(1065): warning:  #61-D: integer operation result is out of range
+main.c(1072): warning:  #61-D: integer operation result is out of range
       
 PIOA->MODER &= ~(0x3 << PIN15*2);
-main.c(1066): warning:  #61-D: integer operation result is out of range
+main.c(1073): warning:  #61-D: integer operation result is out of range
       
 PIOA->PUPDR &= ~(0x3 << PIN15*2);
 main.c: 2 warnings, 0 errors
 linking...
-Program Size: Code=10486 RO-data=430 RW-data=920 ZI-data=1688  
+Program Size: Code=10518 RO-data=430 RW-data=996 ZI-data=1684  
 FromELF: creating hex file...
 ".\Objects\v2.axf" - 0 Error(s), 2 Warning(s).
 
@@ -79,10 +79,10 @@ Package Vendor: Keil
 <h2>Collection of Component Files used:</h2>
 
    * Component: Keil::Device:Startup:2.6.2
+      Source file:   Drivers\CMSIS\Device\ST\STM32F4xx\Source\Templates\arm\startup_stm32f405xx.s
       Include file:  Drivers\CMSIS\Device\ST\STM32F4xx\Include\stm32f4xx.h
       Source file:   MDK\Device\Source\ARM\STM32F40xxx_41xxx_OPT.s
       Source file:   MDK\Device\Source\ARM\STM32F4xx_OTP.s
-      Source file:   Drivers\CMSIS\Device\ST\STM32F4xx\Source\Templates\arm\startup_stm32f405xx.s
       Source file:   Drivers\CMSIS\Device\ST\STM32F4xx\Source\Templates\system_stm32f4xx.c
 
    * Component: Keil::Device:STM32Cube HAL:WWDG:1.7.3
@@ -95,16 +95,16 @@ Package Vendor: Keil
       Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c
 
    * Component: Keil::Device:STM32Cube HAL:TIM:1.7.3
-      Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim_ex.c
       Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim.c
+      Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim_ex.c
 
    * Component: Keil::Device:STM32Cube HAL:RTC:1.7.3
       Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rtc.c
       Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rtc_ex.c
 
    * Component: Keil::Device:STM32Cube HAL:RCC:1.7.3
-      Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc_ex.c
       Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc.c
+      Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc_ex.c
 
    * Component: Keil::Device:STM32Cube HAL:PWR:1.7.3
       Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pwr.c
@@ -132,15 +132,15 @@ Package Vendor: Keil
       Source file:   Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_adc.c
 
    * Component: Keil::Device:STM32Cube Framework:Classic:1.7.3
-      Source file:   MDK\Templates\Src\stm32f4xx_hal_msp.c
       Source file:   MDK\Templates\Src\stm32f4xx_it.c
-      Source file:   MDK\Templates_LL\Src\main.c
-      Include file:  CMSIS\Driver\Config\RTE_Device.h
-      Include file:  MDK\Templates\Inc\stm32f4xx_it.h
       Include file:  MDK\Templates\Inc\main.h
+      Source file:   MDK\Templates_LL\Src\main.c
       Source file:   MDK\Templates\Src\main.c
-      Include file:  MDK\Templates_LL\Inc\main.h
       Include file:  MDK\Templates\Inc\stm32f4xx_hal_conf.h
+      Include file:  CMSIS\Driver\Config\RTE_Device.h
+      Source file:   MDK\Templates\Src\stm32f4xx_hal_msp.c
+      Include file:  MDK\Templates\Inc\stm32f4xx_it.h
+      Include file:  MDK\Templates_LL\Inc\main.h
 
    * Component: ARM::CMSIS:CORE:5.1.1
 

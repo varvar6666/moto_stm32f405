@@ -105,12 +105,13 @@ int main(void)
     if(STATE == MAIN)
     {
             TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+            TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
+        
             main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
             main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
             main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
-        
             TFT_send(main_VOL_text, sizeof(main_VOL_text));
-        
+      
             switch (INPUT_SEL)
             {
                 case FM:{
@@ -274,7 +275,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     static uint8_t week_day;
     static uint8_t year;
 	
-    static uint8_t delay_send = 90;
+    static uint8_t delay_send = 98;
 
     delay_send++;
 	
@@ -300,7 +301,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 			flash_write_newdata();
             
             TFT_send(pages[STATE], sizeof(pages[STATE]));
-			delay_send = 100;
+			delay_send = 98;
 					
 			BT_send(BT_DISC);
             USB_send(USB_CMD_PAUSE);
@@ -322,6 +323,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 i2c_sel_buff[0] = TDA_MAIN_SOURCE;
                 i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
                 I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                
+                MUTED = 0;
+                TFT_send(main_VOL_text, sizeof(main_VOL_text));                
 
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
                             
@@ -411,6 +415,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
                 
                 I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                
+                MUTED = 0;
+                TFT_send(main_VOL_text, sizeof(main_VOL_text));                
                 
                 TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
                 switch (INPUT_SEL)
