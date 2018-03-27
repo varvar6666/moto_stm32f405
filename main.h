@@ -28,11 +28,14 @@ enum PINs
     PIN12,  PIN13,  PIN14,  PIN15
 };
 
-#define AMP_ON  GPIOB->BSRR |= GPIO_BSRR_BR3
-#define AMP_OFF GPIOB->BSRR |= GPIO_BSRR_BS3
+#define AMP_ON      GPIOB->BSRR |= GPIO_BSRR_BR3
+#define AMP_OFF     GPIOB->BSRR |= GPIO_BSRR_BS3
 
-#define BT_ON  GPIOC->BSRR |= GPIO_BSRR_BS13
-#define BT_OFF GPIOC->BSRR |= GPIO_BSRR_BR13
+#define BT_ON       GPIOC->BSRR |= GPIO_BSRR_BS13
+#define BT_OFF      GPIOC->BSRR |= GPIO_BSRR_BR13
+
+#define BULB_CH_ON  GPIOB->BSRR |= GPIO_BSRR_BS6
+#define BULB_CH_OFF GPIOB->BSRR |= GPIO_BSRR_BR6
 
 #define BT_SOUCE     GPIOA->IDR & GPIO_PIN_10 //BT1 <-> Source/onoff
 #define BT_PREV      GPIOA->IDR & GPIO_PIN_11 //BT2 <-> PREV
@@ -40,6 +43,9 @@ enum PINs
 #define BT_PP        GPIOA->IDR & GPIO_PIN_15 //BT4 <-> Play/payse 
 #define BT_VOL_UP    GPIOC->IDR & GPIO_PIN_10 //BT5 <-> VOL+
 #define BT_VOL_DOWN  GPIOC->IDR & GPIO_PIN_11 //BT6 <-> VOL-
+
+#define BT_ENC_A     GPIOB->IDR & GPIO_PIN_5 //ENC_A <-> Pref
+#define BT_ENC_B     GPIOB->IDR & GPIO_PIN_4 //ENC_B <-> Reserved
 
 #define BT_CLK_DOWN GPIOA->IDR & GPIO_PIN_8  //Clock DOWN
 #define BT_CLK_UP   GPIOA->IDR & GPIO_PIN_9  //Clock UP
@@ -73,6 +79,47 @@ enum INPUTs
     AUX
 };
 
+enum TDA_SET_STATEs
+{
+    TDA_SET_LOUDNESS=0,
+    TDA_SET_TREB,
+    TDA_SET_MIDD,
+    TDA_SET_BASS,
+    TDA_SET_SPEAKER_ATT
+};
+
+enum TDA_SET_LOUD_STATEs
+{
+    TDA_SET_LOUD_CENT_FREQ=0,
+    TDA_SET_LOUD_ATTENUATION,
+    TDA_SET_LOUD_HIGN_BOOST
+};
+enum TDA_SET_TREB_STATEs
+{
+    TDA_SET_TREB_CENT_FREQ=0,
+    TDA_SET_TREB_ATTENUATION
+};
+enum TDA_SET_MIDD_STATEs
+{
+    TDA_SET_MIDD_CENT_FREQ=0,
+    TDA_SET_MIDD_ATTENUATION,
+    TDA_SET_MIDD_Q_FACTOR
+};
+enum TDA_SET_BASS_STATEs
+{
+    TDA_SET_BASS_CENT_FREQ=0,
+    TDA_SET_BASS_ATTENUATION,
+    TDA_SET_BASS_Q_FACTOR
+};
+enum TDA_SET_SATT_STATES
+{
+    TDA_SET_SATT_L_F=0,
+    TDA_SET_SATT_R_F,
+    TDA_SET_SATT_L_R,
+    TDA_SET_SATT_R_R
+};
+
+
 /*--------------------------------------------------------------------------------*/
 //TDA Defs
 #define TDA7419_ADDRESS		0x88
@@ -83,7 +130,10 @@ enum INPUTs
 #define TDA_MUTE            0xC6
 #define TDA_UNMUTE          0xC7
 
-#define TDA_VOLUME				0x03
+#define TDA_VOLUME		    0x03
+
+#define TDA_MAIN_LOUDNESS   0x01
+#define TDA_TREBLE_FILTER   0x04
 
 //const uint8_t TDA_inputs[4] = {0x82, 0x84, 0x81, 0x83};
 const uint8_t TDA_inputs[4] = {0xFA, 0xF9, 0xFC, 0xFB};
@@ -104,12 +154,9 @@ uint8_t pages[4][16] = {{'p','a','g','e',' ','l','o','a','d',255,255,255},
                         {'p','a','g','e',' ','a','o','f','f',255,255,255},
                         {'p','a','g','e',' ','m','a','i','n',255,255,255},
                         {'p','a','g','e',' ','s','e','t','t',255,255,255}};
-/*
-uint8_t input_tft[4][24] = {{'A','U','X','.','v','a','l','=','0',255,255,255,'F','M','I','.','v','a','l','=','1',255,255,255},
-                            {'F','M','I','.','v','a','l','=','0',255,255,255,'B','T','I','.','v','a','l','=','1',255,255,255},
-                            {'B','T','I','.','v','a','l','=','0',255,255,255,'U','S','B','.','v','a','l','=','1',255,255,255},
-                            {'U','S','B','.','v','a','l','=','0',255,255,255,'A','U','X','.','v','a','l','=','1',255,255,255}};
-*/                                
+
+uint8_t tft_apage[12] = {'v','a','0','.','v','a','l','=','1',255,255,255};
+                                
 uint8_t input_tft[4][32] = {{'i','n','p','.','t','x','t','=','"','F','M','"',255,255,255,'i','n','p','.','b','c','o','=','0','3','4','8','1','5',255,255,255},
                             {'i','n','p','.','t','x','t','=','"','B','T','"',255,255,255,'i','n','p','.','b','c','o','=','0','1','4','8','4','7',255,255,255},
                             {'i','n','p','.','t','x','t','=','"','U','S','B','"',255,255,255,'i','n','p','.','b','c','o','=','6','3','4','8','8',255,255,255},
@@ -157,6 +204,32 @@ uint8_t main_text_font_5[14] = {'t','e','x','t','.','f','o','n','t','=','5',255,
 uint8_t main_text_font_7[14] = {'t','e','x','t','.','f','o','n','t','=','7',255,255,255};
 	
 uint8_t ADC_text[25] = {'A','D','C','.','t','x','t','=','"','0','0','.','0','V',' ',' ','0','0','.','0','V','"',255,255,255};
+    
+uint8_t tda_sett_pages[5][20] = {{'p','a','g','e',' ','t','d','a','_','l','o','u','d',255,255,255},
+                                 {'p','a','g','e',' ','t','d','a','_','t','r','e','b',255,255,255},
+                                 {'p','a','g','e',' ','t','d','a','_','m','i','d','d',255,255,255},
+                                 {'p','a','g','e',' ','t','d','a','_','b','a','s','s',255,255,255},
+                                 {'p','a','g','e',' ','t','d','a','_','s','a','t','t',255,255,255}};
+
+uint8_t tda_set_LTMB[3][48] = {{'a','t','t','.','b','c','o','=','6','5','5','3','5',255,255,255,'h','_','q','.','b','c','o','=','6','5','5','3','5',255,255,255,'c','_','f','.','b','c','o','=','6','3','4','8','8',255,255,255},
+                               {'h','_','q','.','b','c','o','=','6','5','5','3','5',255,255,255,'c','_','f','.','b','c','o','=','6','5','5','3','5',255,255,255,'a','t','t','.','b','c','o','=','6','3','4','8','8',255,255,255},
+                               {'c','_','f','.','b','c','o','=','6','5','5','3','5',255,255,255,'a','t','t','.','b','c','o','=','6','5','5','3','5',255,255,255,'h','_','q','.','b','c','o','=','6','3','4','8','8',255,255,255}};
+                                   
+uint8_t tda_set_satt[4][48] = {{'l','_','f','.','v','a','l','=','1',255,255,255,'r','_','f','.','v','a','l','=','0',255,255,255,\
+                                'l','_','r','.','v','a','l','=','0',255,255,255,'r','_','r','.','v','a','l','=','0',255,255,255},
+                               {'l','_','f','.','v','a','l','=','0',255,255,255,'r','_','f','.','v','a','l','=','1',255,255,255,\
+                                'l','_','r','.','v','a','l','=','0',255,255,255,'r','_','r','.','v','a','l','=','0',255,255,255},
+                               {'l','_','f','.','v','a','l','=','0',255,255,255,'r','_','f','.','v','a','l','=','0',255,255,255,\
+                                'l','_','r','.','v','a','l','=','1',255,255,255,'r','_','r','.','v','a','l','=','0',255,255,255},
+                               {'l','_','f','.','v','a','l','=','0',255,255,255,'r','_','f','.','v','a','l','=','0',255,255,255,\
+                                'l','_','r','.','v','a','l','=','0',255,255,255,'r','_','r','.','v','a','l','=','1',255,255,255}};
+
+uint8_t tda_set_loud[55] = {'c','_','f','.','t','x','t','=','"','_','_','_','_',' ','H','z','"',255,255,255,\
+                            'a','t','t','.','t','x','t','=','"','-','_','_',' ','d','B','"',255,255,255,\
+                            'h','_','q','.','t','x','t','=','"','_','_','_','"',255,255,255};
+
+uint8_t tda_set_treb[39] = {'c','_','f','.','t','x','t','=','"','_','_','_','_',' ','H','z','"',255,255,255,\
+                            'a','t','t','.','t','x','t','=','"','-','_','_',' ','d','B','"',255,255,255};
 																 
 /*--------------------------------------------------------------------------------*/
 // BT

@@ -3,9 +3,9 @@
 <title>Static Call Graph - [.\Objects\v2.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\v2.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Mar 27 12:49:53 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Mar 27 18:20:42 2018
 <BR><P>
-<H3>Maximum Stack Usage =         40 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =         48 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
 TIM8_TRG_COM_TIM14_IRQHandler &rArr; TEA_set_freq &rArr; I2C1_Send
 <P>
@@ -631,7 +631,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[80]"></a>Init_GPIO</STRONG> (Thumb, 390 bytes, Stack size 0 bytes, main.o(i.Init_GPIO))
+<P><STRONG><a name="[80]"></a>Init_GPIO</STRONG> (Thumb, 440 bytes, Stack size 0 bytes, main.o(i.Init_GPIO))
 <BR><BR>[Called By]<UL><LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -695,8 +695,8 @@ Global Symbols
 <LI><a href="#[18]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DMA1_Stream0_IRQHandler
 </UL>
 
-<P><STRONG><a name="[3a]"></a>TIM8_TRG_COM_TIM14_IRQHandler</STRONG> (Thumb, 5250 bytes, Stack size 12 bytes, main.o(i.TIM8_TRG_COM_TIM14_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 40<LI>Call Chain = TIM8_TRG_COM_TIM14_IRQHandler &rArr; TEA_set_freq &rArr; I2C1_Send
+<P><STRONG><a name="[3a]"></a>TIM8_TRG_COM_TIM14_IRQHandler</STRONG> (Thumb, 7510 bytes, Stack size 20 bytes, main.o(i.TIM8_TRG_COM_TIM14_IRQHandler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 48<LI>Call Chain = TIM8_TRG_COM_TIM14_IRQHandler &rArr; TEA_set_freq &rArr; I2C1_Send
 </UL>
 <BR>[Calls]<UL><LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;flash_write_newdata
 <LI><a href="#[7b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USB_send_par
@@ -761,7 +761,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[3a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIM8_TRG_COM_TIM14_IRQHandler
 </UL>
 
-<P><STRONG><a name="[68]"></a>main</STRONG> (Thumb, 930 bytes, Stack size 0 bytes, main.o(i.main))
+<P><STRONG><a name="[68]"></a>main</STRONG> (Thumb, 922 bytes, Stack size 0 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = main &rArr; Init_TDA &rArr; I2C1_Send
 </UL>
 <BR>[Calls]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;flash_read

@@ -5,6 +5,13 @@ uint8_t SET_TIME_STATE = SET_TIME_HOUR;
 uint8_t INPUT_SEL = FM;
 uint8_t prev_state;
 
+uint8_t TDA_SET_STATE = TDA_SET_LOUDNESS;
+int8_t TDA_SET_LOUD_STATE = TDA_SET_LOUD_CENT_FREQ;
+int8_t TDA_SET_TREB_STATE = TDA_SET_TREB_CENT_FREQ;
+int8_t TDA_SET_MIDD_STATE = TDA_SET_MIDD_CENT_FREQ;
+int8_t TDA_SET_BASS_STATE = TDA_SET_BASS_CENT_FREQ;
+int8_t TDA_SET_SATT_STATE = TDA_SET_SATT_L_F;
+
 uint8_t OFF_counter = 0;
 
 uint8_t I2C_res, USB_res;
@@ -17,10 +24,6 @@ uint8_t bt_rx_buff[BT_RX_BUFF_SIZE];
 uint8_t usb_rx_buff[11];
 uint8_t usb_status = USB_PAUSE;
 uint8_t usb_play_mode  = 0;
-
-uint8_t usb_q_rsv = 1;
-
-uint8_t tr_cn[4];
 
 struct TRACK_INFO
 {
@@ -36,6 +39,42 @@ int8_t VOLUME = 15;
 uint8_t MUTED = 0;
 
 uint16_t ADC_Buff[ADC_BUF_NUM];
+
+struct TDA_LOUDNESS
+{
+    uint8_t atteniation;
+    uint8_t center_freq;
+    uint8_t high_boost;
+} TDA_loudness;
+
+struct TDA_TREBLE
+{
+    int8_t atteniation;
+    uint8_t center_freq;
+} TDA_treble;
+
+struct TDA_MIDDLE
+{
+    int8_t atteniation;
+    uint8_t center_freq;
+    uint8_t Q_factot;
+} TDA_middle;
+
+struct TDA_BASS
+{
+    int8_t atteniation;
+    uint8_t center_freq;
+    uint8_t Q_factot;
+} TDA_bass;
+
+struct TDA_SP_ATT
+{
+    int8_t left_front;
+    int8_t right_front;
+    int8_t left_rear;
+    int8_t right_rear;
+} TDA_sp_att;
+
 
 int main(void)
 {
@@ -97,6 +136,7 @@ int main(void)
     RADIO_FREQ = (0xFFFF0000 & flash_read(RADIO_FREQ_ADR)) >> 16;
 
     TFT_send(pages[STATE], sizeof(pages[STATE]));
+    TFT_send(tft_apage, sizeof(tft_apage));
     
     I2C_res = Init_TDA();
     
@@ -104,7 +144,6 @@ int main(void)
     
     if(STATE == MAIN)
     {
-            TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
             TFT_send(input_tft[INPUT_SEL], sizeof(input_tft[INPUT_SEL]));
         
             main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
@@ -281,9 +320,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 	
     uint8_t i2c_sel_buff[2] = {TDA_MAIN_SOURCE, TDA_SOURCE_MUTE};
 	uint8_t i2c_vol_buff[2] = {TDA_VOLUME, VOLUME};
+    uint8_t i2c_M_L_buff[2] = {TDA_MAIN_LOUDNESS, 0};
+    uint8_t i2c_T_F_buff[2] = {TDA_TREBLE_FILTER, 0};
 
     GPIOB->BSRR |= GPIO_BSRR_BR12;
-		
+    
     if(BT_SOUCE) // source select & OFF audio
     {
         GPIOB->BSRR |= GPIO_BSRR_BS12;
@@ -499,6 +540,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
                 
                 TFT_send(main_VOL_text, sizeof(main_VOL_text));
+                delay_send = 98;
             }
         }
         OFF_counter = 0;
@@ -567,6 +609,51 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         TFT_send(main_USB_text, sizeof(main_USB_text));
                     break;}
             
+            }
+        }
+        
+        if(STATE == TDA_SETT)
+        {
+            switch(TDA_SET_STATE)
+            {
+                case TDA_SET_LOUDNESS:
+                {
+                    TDA_SET_LOUD_STATE++;
+                    if(TDA_SET_LOUD_STATE > TDA_SET_LOUD_HIGN_BOOST)
+                        TDA_SET_LOUD_STATE = TDA_SET_LOUD_HIGN_BOOST;
+                    TFT_send(tda_set_LTMB[TDA_SET_LOUD_STATE], sizeof(tda_set_LTMB[TDA_SET_LOUD_STATE]));
+                    break;
+                }
+                case TDA_SET_TREB:
+                {
+                    TDA_SET_TREB_STATE = TDA_SET_TREB_ATTENUATION;
+                    TFT_send(tda_set_LTMB[TDA_SET_TREB_STATE], sizeof(tda_set_LTMB[TDA_SET_TREB_STATE]));
+                    break;
+                }
+                case TDA_SET_MIDD:
+                {
+                    TDA_SET_MIDD_STATE++;
+                    if(TDA_SET_MIDD_STATE > TDA_SET_MIDD_Q_FACTOR)
+                        TDA_SET_MIDD_STATE = TDA_SET_MIDD_Q_FACTOR;
+                    TFT_send(tda_set_LTMB[TDA_SET_MIDD_STATE], sizeof(tda_set_LTMB[TDA_SET_MIDD_STATE]));
+                    break;
+                }
+                case TDA_SET_BASS:
+                {
+                    TDA_SET_BASS_STATE++;
+                    if(TDA_SET_BASS_STATE > TDA_SET_BASS_Q_FACTOR)
+                        TDA_SET_BASS_STATE = TDA_SET_BASS_Q_FACTOR;
+                    TFT_send(tda_set_LTMB[TDA_SET_BASS_STATE], sizeof(tda_set_LTMB[TDA_SET_BASS_STATE]));
+                    break;
+                }
+                case TDA_SET_SPEAKER_ATT:
+                {
+                    TDA_SET_SATT_STATE++;
+                    if(TDA_SET_SATT_STATE > TDA_SET_SATT_R_R)
+                        TDA_SET_SATT_STATE = TDA_SET_SATT_L_F;
+                    TFT_send(tda_set_satt[TDA_SET_SATT_STATE], sizeof(tda_set_satt[TDA_SET_SATT_STATE]));
+                    break;
+                }
             }
         }
     }
@@ -701,53 +788,312 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                     break;}
             }
         }
+        
+        if(STATE == TDA_SETT)
+        {
+            switch(TDA_SET_STATE)
+            {
+                case TDA_SET_LOUDNESS:
+                {
+                    TDA_SET_LOUD_STATE--;
+                    if(TDA_SET_LOUD_STATE < TDA_SET_LOUD_CENT_FREQ)
+                        TDA_SET_LOUD_STATE = TDA_SET_LOUD_CENT_FREQ;
+                    TFT_send(tda_set_LTMB[TDA_SET_LOUD_STATE], sizeof(tda_set_LTMB[TDA_SET_LOUD_STATE]));
+                    break;
+                }
+                case TDA_SET_TREB:
+                {
+                    TDA_SET_TREB_STATE = TDA_SET_TREB_CENT_FREQ;
+                    TFT_send(tda_set_LTMB[TDA_SET_TREB_STATE], sizeof(tda_set_LTMB[TDA_SET_TREB_STATE]));
+                    break;
+                }
+                case TDA_SET_MIDD:
+                {
+                    TDA_SET_MIDD_STATE--;
+                    if(TDA_SET_MIDD_STATE < TDA_SET_MIDD_CENT_FREQ)
+                        TDA_SET_MIDD_STATE = TDA_SET_MIDD_CENT_FREQ;
+                    TFT_send(tda_set_LTMB[TDA_SET_MIDD_STATE], sizeof(tda_set_LTMB[TDA_SET_MIDD_STATE]));
+                    break;
+                }
+                case TDA_SET_BASS:
+                {
+                    TDA_SET_BASS_STATE--;
+                    if(TDA_SET_BASS_STATE < TDA_SET_BASS_CENT_FREQ)
+                        TDA_SET_BASS_STATE = TDA_SET_BASS_CENT_FREQ;
+                    TFT_send(tda_set_LTMB[TDA_SET_BASS_STATE], sizeof(tda_set_LTMB[TDA_SET_BASS_STATE]));
+                    break;
+                }
+                case TDA_SET_SPEAKER_ATT:
+                {
+                    TDA_SET_SATT_STATE--;
+                    if(TDA_SET_SATT_STATE < TDA_SET_SATT_L_F)
+                        TDA_SET_SATT_STATE = TDA_SET_SATT_R_R;
+                    TFT_send(tda_set_satt[TDA_SET_SATT_STATE], sizeof(tda_set_satt[TDA_SET_SATT_STATE]));
+                    break;
+                }
+            }
+        }        
     }
     
     if(BT_VOL_UP) // increase volume
     {
         GPIOB->BSRR |= GPIO_BSRR_BS12;
-        MUTED = 0;
-        VOLUME++;
-        if(VOLUME > 15) VOLUME = 15;
-        
-        flash_write_newdata();
+        if(STATE == MAIN)
+        {
+            MUTED = 0;
+            VOLUME++;
+            if(VOLUME > 15) VOLUME = 15;
+            
+            flash_write_newdata();
 
-        i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-        i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
-        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
-        
-        i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
-        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+            i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+            
+            i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
 
-        main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
-        main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
-        main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+            main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+            main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+            main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+            
+            TFT_send(main_VOL_text, sizeof(main_VOL_text));
+        }
         
-        TFT_send(main_VOL_text, sizeof(main_VOL_text));
+        if(STATE == TDA_SETT)
+        {
+            switch(TDA_SET_STATE)
+            {
+                case TDA_SET_LOUDNESS:
+                {
+                    switch(TDA_SET_LOUD_STATE)
+                    {
+                        case TDA_SET_LOUD_CENT_FREQ:
+                        {
+                            TDA_loudness.center_freq++;
+                            if(TDA_loudness.center_freq > 3) TDA_loudness.center_freq = 3;
+                            switch (TDA_loudness.center_freq)
+                            {
+                                case 0:
+                                {
+                                    tda_set_loud[9] =' ';
+                                    tda_set_loud[10]='F';
+                                    tda_set_loud[11]='L';
+                                    tda_set_loud[12]='A';
+                                    tda_set_loud[13]='T';
+                                    tda_set_loud[14]=' ';
+                                    tda_set_loud[15]=' ';
+                                    break;
+                                }
+                                case 1:
+                                {
+                                    tda_set_loud[9] =' ';
+                                    tda_set_loud[10]='4';
+                                    tda_set_loud[11]='0';
+                                    tda_set_loud[12]='0';
+                                    tda_set_loud[13]=' ';
+                                    tda_set_loud[14]='H';
+                                    tda_set_loud[15]='z';
+                                    break;
+                                }
+                                case 2:
+                                {
+                                    tda_set_loud[9] =' ';
+                                    tda_set_loud[10]='8';
+                                    tda_set_loud[11]='0';
+                                    tda_set_loud[12]='0';
+                                    tda_set_loud[13]=' ';
+                                    tda_set_loud[14]='H';
+                                    tda_set_loud[15]='z';
+                                    break;
+                                }
+                                case 3:
+                                {
+                                    tda_set_loud[9] ='2';
+                                    tda_set_loud[10]='4';
+                                    tda_set_loud[11]='0';
+                                    tda_set_loud[12]='0';
+                                    tda_set_loud[13]=' ';
+                                    tda_set_loud[14]='H';
+                                    tda_set_loud[15]='z';
+                                    break;
+                                }
+                            }                            
+                            
+                            
+                            break;
+                        }
+                        case TDA_SET_LOUD_ATTENUATION:
+                        {
+                            if(TDA_loudness.atteniation == 0)
+                                TDA_loudness.atteniation = 0;
+                            else
+                            TDA_loudness.atteniation--;
 
+                            tda_set_loud[30] = TDA_loudness.atteniation/10 + 0x30;
+                            tda_set_loud[31] = TDA_loudness.atteniation-((TDA_loudness.atteniation/10)*10) + 0x30;
+                            break;
+                        }
+                        case TDA_SET_LOUD_HIGN_BOOST:
+                        {
+                            TDA_loudness.high_boost = 0;
+                            
+                            tda_set_loud[48] = ' ';
+                            tda_set_loud[49] = 'O';
+                            tda_set_loud[50] = 'N';                            
+                            break;
+                        }
+                    }
+                    i2c_M_L_buff[1] = (TDA_loudness.atteniation & 0xF)|(TDA_loudness.center_freq & 0x30)| (TDA_loudness.high_boost & 0x40);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_M_L_buff, sizeof(i2c_M_L_buff));
+                    
+                    TFT_send(tda_set_loud, sizeof(tda_set_loud));
+                    break;
+                }
+                case TDA_SET_TREB:
+                {
+                    if(TDA_SET_TREB_STATE == TDA_SET_TREB_CENT_FREQ)
+                    {
+                        
+                    }
+                    else
+                    {
+                        TDA_treble.atteniation++;
+                        if(TDA_treble.atteniation > 15) TDA_treble.atteniation = 15;
+                        
+                        tda_set_treb[29] = (TDA_treble.atteniation > 0) ? ('+') : ('-');
+                        tda_set_treb[30] = TDA_treble.atteniation/10 + 0x30;
+                        tda_set_treb[31] = TDA_treble.atteniation-((TDA_treble.atteniation/10)*10) + 0x30;                        
+                    }
+                    
+                    TFT_send(tda_set_treb, sizeof(tda_set_treb));
+                    break;
+                }
+            
+            }
+        }
     }
     
     if(BT_VOL_DOWN) // decrease volume
     {
         GPIOB->BSRR |= GPIO_BSRR_BS12;
-        MUTED = 0;
-        VOLUME--;
-        if(VOLUME < -79) VOLUME = -79;
-        
-        flash_write_newdata();
-        
-        i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-        i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
-        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
-        
-        i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
-        I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+        if(STATE == MAIN)
+        {
+            MUTED = 0;
+            VOLUME--;
+            if(VOLUME < -79) VOLUME = -79;
+            
+            flash_write_newdata();
+            
+            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
+            i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+            
+            i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
 
-        main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
-        main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
-        main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+            main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
+            main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
+            main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
+            
+            TFT_send(main_VOL_text, sizeof(main_VOL_text));
+        }
         
-        TFT_send(main_VOL_text, sizeof(main_VOL_text));
+        if(STATE == TDA_SETT)
+        {
+            switch(TDA_SET_STATE)
+            {
+                case TDA_SET_LOUDNESS:
+                {
+                    switch(TDA_SET_LOUD_STATE)
+                    {
+                        case TDA_SET_LOUD_CENT_FREQ:
+                        {
+                            if(TDA_loudness.center_freq == 0) 
+                                TDA_loudness.center_freq = 0;
+                            else
+                                TDA_loudness.center_freq--;
+                            
+                            switch (TDA_loudness.center_freq)
+                            {
+                                case 0:
+                                {
+                                    tda_set_loud[9] =' ';
+                                    tda_set_loud[10]='F';
+                                    tda_set_loud[11]='L';
+                                    tda_set_loud[12]='A';
+                                    tda_set_loud[13]='T';
+                                    tda_set_loud[14]=' ';
+                                    tda_set_loud[15]=' ';
+                                    break;
+                                }
+                                case 1:
+                                {
+                                    tda_set_loud[9] =' ';
+                                    tda_set_loud[10]='4';
+                                    tda_set_loud[11]='0';
+                                    tda_set_loud[12]='0';
+                                    tda_set_loud[13]=' ';
+                                    tda_set_loud[14]='H';
+                                    tda_set_loud[15]='z';
+                                    break;
+                                }
+                                case 2:
+                                {
+                                    tda_set_loud[9] =' ';
+                                    tda_set_loud[10]='8';
+                                    tda_set_loud[11]='0';
+                                    tda_set_loud[12]='0';
+                                    tda_set_loud[13]=' ';
+                                    tda_set_loud[14]='H';
+                                    tda_set_loud[15]='z';
+                                    break;
+                                }
+                                case 3:
+                                {
+                                    tda_set_loud[9] ='2';
+                                    tda_set_loud[10]='4';
+                                    tda_set_loud[11]='0';
+                                    tda_set_loud[12]='0';
+                                    tda_set_loud[13]=' ';
+                                    tda_set_loud[14]='H';
+                                    tda_set_loud[15]='z';
+                                    break;
+                                }
+                            }                            
+                            
+                            
+                            break;
+                        }
+                        case TDA_SET_LOUD_ATTENUATION:
+                        {
+                            TDA_loudness.atteniation++;
+                            if(TDA_loudness.atteniation > 15)
+                                TDA_loudness.atteniation = 15;
+
+                            tda_set_loud[30] = TDA_loudness.atteniation/10 + 0x30;
+                            tda_set_loud[31] = TDA_loudness.atteniation-((TDA_loudness.atteniation/10)*10) + 0x30;
+                            break;
+                        }
+                        case TDA_SET_LOUD_HIGN_BOOST:
+                        {
+                            TDA_loudness.high_boost = 1;
+                            
+                            tda_set_loud[48] = 'O';
+                            tda_set_loud[49] = 'F';
+                            tda_set_loud[50] = 'F';                            
+                            break;
+                        }
+                    }
+                    i2c_M_L_buff[1] = (TDA_loudness.atteniation & 0xF)|(TDA_loudness.center_freq & 0x30)| (TDA_loudness.high_boost & 0x40);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_M_L_buff, sizeof(i2c_M_L_buff));
+                    
+                    TFT_send(tda_set_loud, sizeof(tda_set_loud));
+                    break;
+                }
+            
+            }
+        }
     }
     
     if(BT_CLK_UP) // Clock button for increase value
@@ -847,7 +1193,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                                 PWR->CR &= ~PWR_CR_DBP;
                                 
                                 TFT_send(pages[STATE], sizeof(pages[STATE]));
-                                                                    delay_send = 100;
+                                delay_send = 98;
                                 break;
                                }
             default:break;
@@ -908,6 +1254,148 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
         }
     }
 
+    
+    if(BT_ENC_A)
+    {
+        if(STATE == MAIN)
+        {
+            STATE = TDA_SETT;
+            
+            TDA_SET_STATE = TDA_SET_LOUDNESS;
+            TFT_send(tda_sett_pages[TDA_SET_STATE], sizeof(tda_sett_pages[TDA_SET_STATE]));
+            TFT_send(tft_apage, sizeof(tft_apage));
+
+            
+            TDA_SET_LOUD_STATE = TDA_SET_LOUD_CENT_FREQ;
+            TFT_send(tda_set_LTMB[TDA_SET_LOUD_STATE], sizeof(tda_set_LTMB[TDA_SET_LOUD_STATE]));
+            
+            switch (TDA_loudness.center_freq)
+            {
+                case 0:
+                {
+                    tda_set_loud[9] =' ';
+                    tda_set_loud[10]='F';
+                    tda_set_loud[11]='L';
+                    tda_set_loud[12]='A';
+                    tda_set_loud[13]='T';
+                    tda_set_loud[14]=' ';
+                    tda_set_loud[15]=' ';
+                    break;
+                }
+                case 1:
+                {
+                    tda_set_loud[9] =' ';
+                    tda_set_loud[10]='4';
+                    tda_set_loud[11]='0';
+                    tda_set_loud[12]='0';
+                    tda_set_loud[13]=' ';
+                    tda_set_loud[14]='H';
+                    tda_set_loud[15]='z';
+                    break;
+                }
+                case 2:
+                {
+                    tda_set_loud[9] =' ';
+                    tda_set_loud[10]='8';
+                    tda_set_loud[11]='0';
+                    tda_set_loud[12]='0';
+                    tda_set_loud[13]=' ';
+                    tda_set_loud[14]='H';
+                    tda_set_loud[15]='z';
+                    break;
+                }
+                case 3:
+                {
+                    tda_set_loud[9] ='2';
+                    tda_set_loud[10]='4';
+                    tda_set_loud[11]='0';
+                    tda_set_loud[12]='0';
+                    tda_set_loud[13]=' ';
+                    tda_set_loud[14]='H';
+                    tda_set_loud[15]='z';
+                    break;
+                }
+            }
+            
+            
+
+            
+            
+            tda_set_loud[30] = TDA_loudness.atteniation/10 + 0x30;
+            tda_set_loud[31] = TDA_loudness.atteniation-((TDA_loudness.atteniation/10)*10) + 0x30;
+            
+            if(TDA_loudness.high_boost)
+            {
+                tda_set_loud[48] = 'O';
+                tda_set_loud[49] = 'F';
+                tda_set_loud[50] = 'F';
+            }
+            else
+            {
+                tda_set_loud[48] = ' ';
+                tda_set_loud[49] = 'O';
+                tda_set_loud[50] = 'N';
+            }
+            
+            TFT_send(tda_set_loud, sizeof(tda_set_loud));
+            
+            
+            
+        }else if(STATE == TDA_SETT)
+        {
+            if(TDA_SET_STATE == TDA_SET_SPEAKER_ATT)
+            {
+                STATE = MAIN;
+                TFT_send(pages[STATE], sizeof(pages[STATE]));
+                TFT_send(tft_apage, sizeof(tft_apage));
+                delay_send = 98;
+            }
+            else
+            {
+                TDA_SET_STATE++;
+                
+                TFT_send(tda_sett_pages[TDA_SET_STATE], sizeof(tda_sett_pages[TDA_SET_STATE]));
+                TFT_send(tft_apage, sizeof(tft_apage));
+                
+                switch(TDA_SET_STATE)
+                {
+                    case TDA_SET_TREB:
+                    {
+                        TDA_SET_TREB_STATE = TDA_SET_TREB_CENT_FREQ;
+                        TFT_send(tda_set_LTMB[TDA_SET_TREB_STATE], sizeof(tda_set_LTMB[TDA_SET_TREB_STATE]));
+
+                        tda_set_treb[29] = (TDA_treble.atteniation > 0) ? ('+') : ('-');
+                        tda_set_treb[30] = TDA_treble.atteniation/10 + 0x30;
+                        tda_set_treb[31] = TDA_treble.atteniation-((TDA_treble.atteniation/10)*10) + 0x30;
+                            
+                        TFT_send(tda_set_treb, sizeof(tda_set_treb));                        
+                        break;
+                    }
+                    case TDA_SET_MIDD:
+                    {
+                        TDA_SET_MIDD_STATE = TDA_SET_MIDD_CENT_FREQ;
+                        TFT_send(tda_set_LTMB[TDA_SET_MIDD_STATE], sizeof(tda_set_LTMB[TDA_SET_MIDD_STATE]));
+                        break;
+                    }
+                    case TDA_SET_BASS:
+                    {
+                        TDA_SET_BASS_STATE = TDA_SET_BASS_CENT_FREQ;
+                        TFT_send(tda_set_LTMB[TDA_SET_BASS_STATE], sizeof(tda_set_LTMB[TDA_SET_BASS_STATE]));
+                        break;
+                    }
+                    case TDA_SET_SPEAKER_ATT:
+                    {
+                        TDA_SET_SATT_STATE = TDA_SET_SATT_L_F;
+                        TFT_send(tda_set_satt[TDA_SET_SATT_STATE], sizeof(tda_set_satt[TDA_SET_SATT_STATE]));
+                        TFT_send(tda_set_satt[TDA_SET_SATT_STATE], sizeof(tda_set_satt[TDA_SET_SATT_STATE]));
+
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
     if(((STATE == MAIN)||(STATE == AUDIO_OFF))&&(delay_send >= 100))
     {
 		delay_send = 0;
@@ -1027,6 +1515,9 @@ void Init_GPIO(void)
     //BT ON/OFF
     GPIOC->MODER |= GPIO_MODE_OUTPUT_PP << PIN13*2;
     
+    //Bulb Check ON/OFF
+    GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN6*2;
+    
     //Set GPIOA PIN0 as usart4 TX <===> DF
     GPIOA->AFR[0] |= GPIO_AF8_UART4 << PIN0*4 |
                      GPIO_AF8_UART4 << PIN1*4;
@@ -1069,8 +1560,11 @@ void Init_GPIO(void)
     GPIOB->OSPEEDR |= GPIO_SPEED_FREQ_VERY_HIGH << PIN8*2 |
                       GPIO_SPEED_FREQ_VERY_HIGH << PIN9*2;    
     
-    GPIOA->MODER &= ~(0x3 << PIN15*2);
-    GPIOA->PUPDR &= ~(0x3 << PIN15*2);
+    GPIOA->MODER &= ~((uint32_t) 0x3 << PIN15*2);
+    GPIOA->PUPDR &= ~((uint32_t)0x3 << PIN15*2);
+    GPIOB->MODER &= ~((uint32_t)0x3 << PIN4*2);
+    GPIOB->PUPDR &= ~((uint32_t)0x3 << PIN4*2);
+
 	GPIOA->MODER |= GPIO_MODE_INPUT << PIN8 *2 | //BT_CLK_DOWN
                     GPIO_MODE_INPUT << PIN9 *2 | //BT_CLK_UP
                     GPIO_MODE_INPUT << PIN10*2 | //BT1
@@ -1079,6 +1573,9 @@ void Init_GPIO(void)
                     GPIO_MODE_INPUT << PIN15*2;  //BT4
     GPIOC->MODER |= GPIO_MODE_INPUT << PIN10*2 | //BT5
                     GPIO_MODE_INPUT << PIN11*2;  //BT6
+    GPIOB->MODER |= GPIO_MODE_INPUT << PIN4*2 |  //ENC_B
+                    GPIO_MODE_INPUT << PIN5*2;   //ENC_C
+                    
 		
 	//Set GPIOA PIN3,4 GPIOC PIN10 as analog input
     GPIOA->MODER |=	GPIO_MODE_ANALOG << PIN3*2 | //ADC3 - IN
