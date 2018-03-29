@@ -6,6 +6,7 @@
 #include "stm32f4xx_hal_adc.h"
 #include "stm32f4xx_hal_tim.h"
 #include "string.h"
+#include "math.h"
 
 #define F_CPU       168000000UL
 #define AHB1        F_CPU
@@ -134,6 +135,13 @@ enum TDA_SET_SATT_STATES
 
 #define TDA_MAIN_LOUDNESS   0x01
 #define TDA_TREBLE_FILTER   0x04
+#define TDA_MIDDLE_FILTER   0x05
+#define TDA_BASS_FILTER     0x06
+#define TDA_M_B_CENT_FREQ   0x08
+#define TDA_SPEAKER_ATT_LF  0x0A
+#define TDA_SPEAKER_ATT_RF  0x0B
+#define TDA_SPEAKER_ATT_LR  0x0C
+#define TDA_SPEAKER_ATT_RR  0x0D
 
 //const uint8_t TDA_inputs[4] = {0x82, 0x84, 0x81, 0x83};
 const uint8_t TDA_inputs[4] = {0xFA, 0xF9, 0xFC, 0xFB};
@@ -228,8 +236,18 @@ uint8_t tda_set_loud[55] = {'c','_','f','.','t','x','t','=','"','_','_','_','_',
                             'a','t','t','.','t','x','t','=','"','-','_','_',' ','d','B','"',255,255,255,\
                             'h','_','q','.','t','x','t','=','"','_','_','_','"',255,255,255};
 
-uint8_t tda_set_treb[39] = {'c','_','f','.','t','x','t','=','"','_','_','_','_',' ','H','z','"',255,255,255,\
+uint8_t tda_set_treb[39] = {'c','_','f','.','t','x','t','=','"','1','_','.','_','k','H','z','"',255,255,255,\
                             'a','t','t','.','t','x','t','=','"','-','_','_',' ','d','B','"',255,255,255};
+
+uint8_t tda_set_midd[56] = {'c','_','f','.','t','x','t','=','"','_','_','0','0',' ','H','z','"',255,255,255,\
+                            'a','t','t','.','t','x','t','=','"','-','_','_',' ','d','B','"',255,255,255,\
+                            'h','_','q','.','t','x','t','=','"','_','.','_','_','"',255,255,255};
+
+uint8_t tda_set_bass[55] = {'c','_','f','.','t','x','t','=','"','_','_','0',' ','H','z','"',255,255,255,\
+                            'a','t','t','.','t','x','t','=','"','-','_','_',' ','d','B','"',255,255,255,\
+                            'h','_','q','.','t','x','t','=','"','_','.','_','_','"',255,255,255};
+
+
 																 
 /*--------------------------------------------------------------------------------*/
 // BT

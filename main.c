@@ -88,7 +88,7 @@ int main(void)
     BT_OFF;
     
     FLASH->KEYR = 0x45670123;
-    FLASH->KEYR = 0xCDEF89AB;	
+    FLASH->KEYR = 0xCDEF89AB;
 
     Init_ADC();
 
@@ -315,13 +315,10 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     static uint8_t year;
 	
     static uint8_t delay_send = 98;
+    
+    uint8_t i2c_buff[2];// = {TDA_MAIN_SOURCE, TDA_SOURCE_MUTE};
 
     delay_send++;
-	
-    uint8_t i2c_sel_buff[2] = {TDA_MAIN_SOURCE, TDA_SOURCE_MUTE};
-	uint8_t i2c_vol_buff[2] = {TDA_VOLUME, VOLUME};
-    uint8_t i2c_M_L_buff[2] = {TDA_MAIN_LOUDNESS, 0};
-    uint8_t i2c_T_F_buff[2] = {TDA_TREBLE_FILTER, 0};
 
     GPIOB->BSRR |= GPIO_BSRR_BR12;
     
@@ -332,10 +329,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
         if((OFF_counter >= 20)&&(STATE == MAIN))
         {
             OFF_counter = 20;
-            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-            i2c_sel_buff[1] = TDA_SOURCE_MUTE;
-            
-            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+            i2c_buff[0] = TDA_MAIN_SOURCE;
+            i2c_buff[1] = TDA_SOURCE_MUTE;
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
             
             STATE = AUDIO_OFF;
 						
@@ -361,9 +357,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 							
                 flash_write_newdata();
                 
-                i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-                i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
-                I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                i2c_buff[0] = TDA_MAIN_SOURCE;
+                i2c_buff[1] = TDA_inputs[INPUT_SEL];
+                I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
                 
                 MUTED = 0;
                 TFT_send(main_VOL_text, sizeof(main_VOL_text));                
@@ -452,10 +448,10 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
             
                 TFT_send(pages[STATE], sizeof(pages[STATE]));
 
-                i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-                i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
+                i2c_buff[0] = TDA_MAIN_SOURCE;
+                i2c_buff[1] = TDA_inputs[INPUT_SEL];
                 
-                I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
                 
                 MUTED = 0;
                 TFT_send(main_VOL_text, sizeof(main_VOL_text));                
@@ -703,9 +699,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         {
                             MUTED = 0;
                             
-                            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-                            i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
-                            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                            i2c_buff[0] = TDA_MAIN_SOURCE;
+                            i2c_buff[1] = TDA_inputs[INPUT_SEL];
+                            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
                             
                             TFT_send(main_VOL_text, sizeof(main_VOL_text));
                         }
@@ -713,9 +709,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         {
                             MUTED = 1;
                             
-                            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-                            i2c_sel_buff[1] = TDA_SOURCE_MUTE;
-                            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+                            i2c_buff[0] = TDA_MAIN_SOURCE;
+                            i2c_buff[1] = TDA_SOURCE_MUTE;
+                            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
                             
                             TFT_send(main_VOL_mute, sizeof(main_VOL_mute));
                         }
@@ -846,12 +842,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
             
             flash_write_newdata();
 
-            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-            i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
-            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+            i2c_buff[0] = TDA_MAIN_SOURCE;
+            i2c_buff[1] = TDA_inputs[INPUT_SEL];
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
             
-            i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
-            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+            i2c_buff[0] = TDA_VOLUME;
+            i2c_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
 
             main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
             main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
@@ -944,8 +941,10 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                             break;
                         }
                     }
-                    i2c_M_L_buff[1] = (TDA_loudness.atteniation & 0xF)|(TDA_loudness.center_freq & 0x30)| (TDA_loudness.high_boost & 0x40);
-                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_M_L_buff, sizeof(i2c_M_L_buff));
+                    
+                    i2c_buff[0] = TDA_MAIN_LOUDNESS;
+                    i2c_buff[1] = (TDA_loudness.atteniation & 0xF)|((TDA_loudness.center_freq << 4) & 0x30)| ((TDA_loudness.high_boost << 6) & 0x40);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
                     
                     TFT_send(tda_set_loud, sizeof(tda_set_loud));
                     break;
@@ -954,6 +953,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 {
                     if(TDA_SET_TREB_STATE == TDA_SET_TREB_CENT_FREQ)
                     {
+                        TDA_treble.center_freq++;
+                        if(TDA_treble.center_freq > 3) TDA_treble.center_freq = 3;
+                        
+                        tda_set_treb[10] = (TDA_treble.center_freq*25)/10 + 0x30;
+                        tda_set_treb[12] = (TDA_treble.center_freq*25)-(((TDA_treble.center_freq*25)/10)*10) + 0x30;
                         
                     }
                     else
@@ -962,11 +966,144 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         if(TDA_treble.atteniation > 15) TDA_treble.atteniation = 15;
                         
                         tda_set_treb[29] = (TDA_treble.atteniation > 0) ? ('+') : ('-');
-                        tda_set_treb[30] = TDA_treble.atteniation/10 + 0x30;
-                        tda_set_treb[31] = TDA_treble.atteniation-((TDA_treble.atteniation/10)*10) + 0x30;                        
+                        tda_set_treb[30] = abs(TDA_treble.atteniation/10) + 0x30;
+                        tda_set_treb[31] = abs(TDA_treble.atteniation-((TDA_treble.atteniation/10)*10)) + 0x30;
                     }
                     
+                    i2c_buff[0] = TDA_TREBLE_FILTER;
+                    i2c_buff[1] = 0x80 | ((TDA_treble.center_freq << 5)&0x60) | (TDA_treble.atteniation > 0 ? (TDA_treble.atteniation | 0x10):(abs(TDA_treble.atteniation)));
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
                     TFT_send(tda_set_treb, sizeof(tda_set_treb));
+                    break;
+                }
+                case TDA_SET_MIDD:
+                {
+                    switch(TDA_SET_MIDD_STATE)
+                    {
+                        case TDA_SET_MIDD_CENT_FREQ:
+                        {
+                            TDA_middle.center_freq++;
+                            if(TDA_middle.center_freq > 3) TDA_middle.center_freq = 3;
+                            
+                            tda_set_midd[9]  = ((TDA_middle.center_freq+1)*5)/10 + 0x30;
+                            tda_set_midd[10] = (TDA_middle.center_freq+1)*5-((((TDA_middle.center_freq+1)*5)/10)*10) + 0x30;
+                            if(TDA_middle.center_freq == 3) tda_set_midd[10] = '5';
+
+                            break;
+                        }
+                        case TDA_SET_MIDD_ATTENUATION:
+                        {
+                            TDA_middle.atteniation++;
+                            if(TDA_middle.atteniation > 15) TDA_middle.atteniation = 15;
+                            
+                            tda_set_midd[29] = (TDA_middle.atteniation > 0) ? ('+') : ('-');
+                            tda_set_midd[30] = abs(TDA_middle.atteniation/10) + 0x30;
+                            tda_set_midd[31] = abs(TDA_middle.atteniation-((TDA_middle.atteniation/10)*10)) + 0x30;
+                            
+                            break;
+                        }
+                        case TDA_SET_MIDD_Q_FACTOR:
+                        {
+                            TDA_middle.Q_factot++;
+                            if(TDA_middle.Q_factot > 3) TDA_middle.Q_factot = 3;
+                            
+                            tda_set_midd[48] = (TDA_middle.Q_factot*25+50)/100 + 0x30;
+                            tda_set_midd[50] = ((TDA_middle.Q_factot*25+50)-((TDA_middle.Q_factot*25+50)/100)*100)/10 + 0x30;
+                            tda_set_midd[51] = (TDA_middle.Q_factot*25+50)-((TDA_middle.Q_factot*25+50)/10)*10 + 0x30;
+                            
+                            break;
+                        }
+                    }
+                    i2c_buff[0] = TDA_MIDDLE_FILTER;
+                    i2c_buff[1] = ((TDA_middle.Q_factot << 5) & 0x60) | ((TDA_middle.atteniation > 0 ? (TDA_middle.atteniation | 0x10):(abs(TDA_middle.atteniation))) & 0x1F);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    i2c_buff[0] = TDA_M_B_CENT_FREQ;
+                    i2c_buff[1] = 0xC0 | ((TDA_bass.center_freq << 4) & 0x30) | ((TDA_middle.center_freq << 2) & 0xC);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    TFT_send(tda_set_midd, sizeof(tda_set_midd));
+                    break;
+                }
+                case TDA_SET_BASS:
+                {
+                    switch(TDA_SET_BASS_STATE)
+                    {
+                        case TDA_SET_BASS_CENT_FREQ:
+                        {
+                            TDA_bass.center_freq++;
+                            if(TDA_bass.center_freq > 3) TDA_bass.center_freq = 3;
+                            
+                            switch(TDA_bass.center_freq)
+                            {
+                                case 0:
+                                {
+                                    tda_set_bass[9]  = ' ';
+                                    tda_set_bass[10] = '6';
+                                    break;
+                                }
+                                case 1:
+                                {
+                                    tda_set_bass[9]  = ' ';
+                                    tda_set_bass[10] = '8';
+                                    break;
+                                }
+                                case 2:
+                                {
+                                    tda_set_bass[9]  = '1';
+                                    tda_set_bass[10] = '0';
+                                    break;
+                                }
+                                case 3:
+                                {
+                                    tda_set_bass[9]  = '2';
+                                    tda_set_bass[10] = '0';
+                                    break;
+                                }
+                            }
+
+                            break;
+                        }
+                        case TDA_SET_BASS_ATTENUATION:
+                        {
+                            TDA_bass.atteniation++;
+                            if(TDA_bass.atteniation > 15) TDA_bass.atteniation = 15;
+                            
+                            tda_set_bass[28] = (TDA_bass.atteniation > 0) ? ('+') : ('-');
+                            tda_set_bass[29] = abs(TDA_bass.atteniation/10) + 0x30;
+                            tda_set_bass[30] = abs(TDA_bass.atteniation-((TDA_bass.atteniation/10)*10)) + 0x30;
+                            
+                            break;
+                        }
+                        case TDA_SET_BASS_Q_FACTOR:
+                        {
+                            TDA_bass.Q_factot++;
+                            if(TDA_bass.Q_factot > 3) TDA_bass.Q_factot = 3;
+                            
+                            tda_set_bass[47] = '1';
+                            tda_set_bass[49] = (TDA_bass.Q_factot*25)/10 + 0x30;
+                            tda_set_bass[50] =  TDA_bass.Q_factot*25 - ((TDA_bass.Q_factot*25)/10)*10 + 0x30;
+                            if(TDA_bass.Q_factot == 3)
+                            {
+                                tda_set_bass[47] = '2';
+                                tda_set_bass[49] = '0';
+                                tda_set_bass[50] = '0';
+                            }
+                            
+                            break;
+                        }
+                    }
+                    
+                    i2c_buff[0] = TDA_BASS_FILTER;
+                    i2c_buff[1] = ((TDA_bass.Q_factot << 5) & 0x60) | ((TDA_bass.atteniation > 0 ? (TDA_bass.atteniation | 0x10):(abs(TDA_bass.atteniation))) & 0x1F);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    i2c_buff[0] = TDA_M_B_CENT_FREQ;
+                    i2c_buff[1] = ((TDA_bass.center_freq << 4) & 0x30) | ((TDA_middle.center_freq << 2) & 0xC);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    TFT_send(tda_set_bass, sizeof(tda_set_bass));
                     break;
                 }
             
@@ -985,12 +1122,13 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
             
             flash_write_newdata();
             
-            i2c_sel_buff[0] = TDA_MAIN_SOURCE;
-            i2c_sel_buff[1] = TDA_inputs[INPUT_SEL];
-            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_sel_buff, sizeof(i2c_sel_buff));
+            i2c_buff[0] = TDA_MAIN_SOURCE;
+            i2c_buff[1] = TDA_inputs[INPUT_SEL];
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
             
-            i2c_vol_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
-            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_vol_buff, sizeof(i2c_vol_buff));
+            i2c_buff[0] = TDA_VOLUME;
+            i2c_buff[1] = VOLUME > 0 ? VOLUME : 16-VOLUME;
+            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
 
             main_VOL_text[9] =   VOLUME > 0 ? '+' : '-';
             main_VOL_text[10] = (VOLUME > 0 ? VOLUME/10 : -VOLUME/10) + 0x30;
@@ -1085,10 +1223,181 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                             break;
                         }
                     }
-                    i2c_M_L_buff[1] = (TDA_loudness.atteniation & 0xF)|(TDA_loudness.center_freq & 0x30)| (TDA_loudness.high_boost & 0x40);
-                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_M_L_buff, sizeof(i2c_M_L_buff));
+                    
+                    i2c_buff[0] = TDA_MAIN_LOUDNESS;
+                    i2c_buff[1] = (TDA_loudness.atteniation & 0xF)|((TDA_loudness.center_freq << 4) & 0x30)| ((TDA_loudness.high_boost << 6) & 0x40);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
                     
                     TFT_send(tda_set_loud, sizeof(tda_set_loud));
+                    break;
+                }
+                case TDA_SET_TREB:
+                {
+                    if(TDA_SET_TREB_STATE == TDA_SET_TREB_CENT_FREQ)
+                    {
+                        if(TDA_treble.center_freq == 0)
+                            TDA_treble.center_freq = 0;
+                        else                        
+                            TDA_treble.center_freq--;
+                        
+                        
+                        tda_set_treb[10] = (TDA_treble.center_freq*25)/10 + 0x30;
+                        tda_set_treb[12] = (TDA_treble.center_freq*25)-(((TDA_treble.center_freq*25)/10)*10) + 0x30;
+                        
+                    }
+                    else
+                    {
+                        TDA_treble.atteniation--;
+                        if(TDA_treble.atteniation < -15) TDA_treble.atteniation = -15;
+                        
+                        tda_set_treb[29] = (TDA_treble.atteniation > 0) ? ('+') : ('-');
+                        tda_set_treb[30] = abs(TDA_treble.atteniation/10) + 0x30;
+                        tda_set_treb[31] = abs(TDA_treble.atteniation-((TDA_treble.atteniation/10)*10)) + 0x30;
+                    }
+                    
+                    i2c_buff[0] = TDA_TREBLE_FILTER;
+                    i2c_buff[1] = 0x80 | ((TDA_treble.center_freq << 5)&0x60) | (TDA_treble.atteniation > 0 ? (TDA_treble.atteniation | 0x10):(abs(TDA_treble.atteniation)));
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    TFT_send(tda_set_treb, sizeof(tda_set_treb));
+                    break;
+                }
+                case TDA_SET_MIDD:
+                {
+                    switch(TDA_SET_MIDD_STATE)
+                    {
+                        case TDA_SET_MIDD_CENT_FREQ:
+                        {
+                            if(TDA_middle.center_freq == 0)
+                                TDA_middle.center_freq = 0;
+                            else
+                                TDA_middle.center_freq--;
+                            
+                            tda_set_midd[9]  = ((TDA_middle.center_freq+1)*5)/10 + 0x30;
+                            tda_set_midd[10] = (TDA_middle.center_freq+1)*5-((((TDA_middle.center_freq+1)*5)/10)*10) + 0x30;
+                            if(TDA_middle.center_freq == 3) tda_set_midd[10] = '5';
+
+                            break;
+                        }
+                        case TDA_SET_MIDD_ATTENUATION:
+                        {
+                            TDA_middle.atteniation--;
+                            if(TDA_middle.atteniation < 15) TDA_middle.atteniation = -15;
+                            
+                            tda_set_midd[29] = (TDA_middle.atteniation > 0) ? ('+') : ('-');
+                            tda_set_midd[30] = abs(TDA_middle.atteniation/10) + 0x30;
+                            tda_set_midd[31] = abs(TDA_middle.atteniation-((TDA_middle.atteniation/10)*10)) + 0x30;
+                            
+                            break;
+                        }
+                        case TDA_SET_MIDD_Q_FACTOR:
+                        {
+                            if(TDA_middle.Q_factot == 0)
+                                TDA_middle.Q_factot = 0;
+                            else
+                                TDA_middle.Q_factot--;
+                            
+                            tda_set_midd[48] = (TDA_middle.Q_factot*25+50)/100 + 0x30;
+                            tda_set_midd[50] = ((TDA_middle.Q_factot*25+50)-((TDA_middle.Q_factot*25+50)/100)*100)/10 + 0x30;
+                            tda_set_midd[51] = (TDA_middle.Q_factot*25+50)-((TDA_middle.Q_factot*25+50)/10)*10 + 0x30;
+                            
+                            break;
+                        }
+                    }
+                    
+                    i2c_buff[0] = TDA_MIDDLE_FILTER;
+                    i2c_buff[1] = ((TDA_middle.Q_factot << 5) & 0x60) | ((TDA_middle.atteniation > 0 ? (TDA_middle.atteniation | 0x10):(abs(TDA_middle.atteniation))) & 0x1F);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    i2c_buff[0] = TDA_M_B_CENT_FREQ;
+                    i2c_buff[1] = 0xC0 | ((TDA_bass.center_freq << 4) & 0x30) | ((TDA_middle.center_freq << 2) & 0xC);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    TFT_send(tda_set_midd, sizeof(tda_set_midd));
+                    break;
+                }
+                case TDA_SET_BASS:
+                {
+                    switch(TDA_SET_BASS_STATE)
+                    {
+                        case TDA_SET_BASS_CENT_FREQ:
+                        {
+                            if(TDA_bass.center_freq == 0)
+                                TDA_bass.center_freq = 0;
+                            else
+                                TDA_bass.center_freq--;
+                            
+                            switch(TDA_bass.center_freq)
+                            {
+                                case 0:
+                                {
+                                    tda_set_bass[9]  = ' ';
+                                    tda_set_bass[10] = '6';
+                                    break;
+                                }
+                                case 1:
+                                {
+                                    tda_set_bass[9]  = ' ';
+                                    tda_set_bass[10] = '8';
+                                    break;
+                                }
+                                case 2:
+                                {
+                                    tda_set_bass[9]  = '1';
+                                    tda_set_bass[10] = '0';
+                                    break;
+                                }
+                                case 3:
+                                {
+                                    tda_set_bass[9]  = '2';
+                                    tda_set_bass[10] = '0';
+                                    break;
+                                }
+                            }
+
+                            break;
+                        }
+                        case TDA_SET_BASS_ATTENUATION:
+                        {
+                            TDA_bass.atteniation--;
+                            if(TDA_bass.atteniation < -15) TDA_bass.atteniation = -15;
+                            
+                            tda_set_bass[28] = (TDA_bass.atteniation > 0) ? ('+') : ('-');
+                            tda_set_bass[29] = abs(TDA_bass.atteniation/10) + 0x30;
+                            tda_set_bass[30] = abs(TDA_bass.atteniation-((TDA_bass.atteniation/10)*10)) + 0x30;
+                            
+                            break;
+                        }
+                        case TDA_SET_BASS_Q_FACTOR:
+                        {
+                            if(TDA_bass.Q_factot == 0)
+                                TDA_bass.Q_factot = 0;
+                            else
+                                TDA_bass.Q_factot--;
+                            
+                            tda_set_bass[47] = '1';
+                            tda_set_bass[49] = (TDA_bass.Q_factot*25)/10 + 0x30;
+                            tda_set_bass[50] =  TDA_bass.Q_factot*25 - ((TDA_bass.Q_factot*25)/10)*10 + 0x30;
+                            if(TDA_bass.Q_factot == 3)
+                            {
+                                tda_set_bass[47] = '2';
+                                tda_set_bass[49] = '0';
+                                tda_set_bass[50] = '0';
+                            }
+                            
+                            break;
+                        }
+                    }
+                    
+                    i2c_buff[0] = TDA_BASS_FILTER;
+                    i2c_buff[1] = ((TDA_bass.Q_factot << 5) & 0x60) | ((TDA_bass.atteniation > 0 ? (TDA_bass.atteniation | 0x10):(abs(TDA_bass.atteniation))) & 0x1F);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    i2c_buff[0] = TDA_M_B_CENT_FREQ;
+                    i2c_buff[1] = ((TDA_bass.center_freq << 4) & 0x30) | ((TDA_middle.center_freq << 2) & 0xC);
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    TFT_send(tda_set_bass, sizeof(tda_set_bass));
                     break;
                 }
             
@@ -1363,24 +1672,86 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                     {
                         TDA_SET_TREB_STATE = TDA_SET_TREB_CENT_FREQ;
                         TFT_send(tda_set_LTMB[TDA_SET_TREB_STATE], sizeof(tda_set_LTMB[TDA_SET_TREB_STATE]));
-
+                        
+                        tda_set_treb[10] = (TDA_treble.center_freq*25)/10 + 0x30;
+                        tda_set_treb[12] = TDA_treble.center_freq*25-(((TDA_treble.center_freq*25)/10)*10) + 0x30;
+                        
                         tda_set_treb[29] = (TDA_treble.atteniation > 0) ? ('+') : ('-');
-                        tda_set_treb[30] = TDA_treble.atteniation/10 + 0x30;
-                        tda_set_treb[31] = TDA_treble.atteniation-((TDA_treble.atteniation/10)*10) + 0x30;
+                        tda_set_treb[30] = abs(TDA_treble.atteniation/10) + 0x30;
+                        tda_set_treb[31] = abs(TDA_treble.atteniation-((TDA_treble.atteniation/10)*10)) + 0x30;
                             
-                        TFT_send(tda_set_treb, sizeof(tda_set_treb));                        
+                        TFT_send(tda_set_treb, sizeof(tda_set_treb));
                         break;
                     }
                     case TDA_SET_MIDD:
                     {
                         TDA_SET_MIDD_STATE = TDA_SET_MIDD_CENT_FREQ;
+
                         TFT_send(tda_set_LTMB[TDA_SET_MIDD_STATE], sizeof(tda_set_LTMB[TDA_SET_MIDD_STATE]));
+
+                        tda_set_midd[9]  = ((TDA_middle.center_freq+1)*5)/10 + 0x30;
+                        tda_set_midd[10] = (TDA_middle.center_freq+1)*5-((((TDA_middle.center_freq+1)*5)/10)*10) + 0x30;
+                        if(TDA_middle.center_freq == 3) tda_set_midd[10] = '5';
+
+                        tda_set_midd[29] = (TDA_middle.atteniation > 0) ? ('+') : ('-');
+                        tda_set_midd[30] = abs(TDA_middle.atteniation/10) + 0x30;
+                        tda_set_midd[31] = abs(TDA_middle.atteniation-((TDA_middle.atteniation/10)*10)) + 0x30;
+                        
+                        tda_set_midd[48] = (TDA_middle.Q_factot*25+50)/100 + 0x30;
+                        tda_set_midd[50] = ((TDA_middle.Q_factot*25+50)-((TDA_middle.Q_factot*25+50)/100)*100)/10 + 0x30;
+                        tda_set_midd[51] = (TDA_middle.Q_factot*25+50)-((TDA_middle.Q_factot*25+50)/10)*10 + 0x30;
+                        
+                        TFT_send(tda_set_midd, sizeof(tda_set_midd));
                         break;
                     }
                     case TDA_SET_BASS:
                     {
                         TDA_SET_BASS_STATE = TDA_SET_BASS_CENT_FREQ;
                         TFT_send(tda_set_LTMB[TDA_SET_BASS_STATE], sizeof(tda_set_LTMB[TDA_SET_BASS_STATE]));
+                        
+                        switch(TDA_bass.center_freq)
+                        {
+                            case 0:
+                            {
+                                tda_set_bass[9]  = ' ';
+                                tda_set_bass[10] = '6';
+                                break;
+                            }
+                            case 1:
+                            {
+                                tda_set_bass[9]  = ' ';
+                                tda_set_bass[10] = '8';
+                                break;
+                            }
+                            case 2:
+                            {
+                                tda_set_bass[9]  = '1';
+                                tda_set_bass[10] = '0';
+                                break;
+                            }
+                            case 3:
+                            {
+                                tda_set_bass[9]  = '2';
+                                tda_set_bass[10] = '0';
+                                break;
+                            }
+                        }
+                        
+                        tda_set_bass[28] = (TDA_bass.atteniation > 0) ? ('+') : ('-');
+                        tda_set_bass[29] = abs(TDA_bass.atteniation/10) + 0x30;
+                        tda_set_bass[30] = abs(TDA_bass.atteniation-((TDA_bass.atteniation/10)*10)) + 0x30;
+                        
+                        tda_set_bass[47] = '1';
+                        tda_set_bass[49] = (TDA_bass.Q_factot*25)/10 + 0x30;
+                        tda_set_bass[50] =  TDA_bass.Q_factot*25 - ((TDA_bass.Q_factot*25)/10)*10 + 0x30;
+                        if(TDA_bass.Q_factot == 3)
+                        {
+                            tda_set_bass[47] = '2';
+                            tda_set_bass[49] = '0';
+                            tda_set_bass[50] = '0';
+                        }
+
+                        TFT_send(tda_set_bass, sizeof(tda_set_bass));
                         break;
                     }
                     case TDA_SET_SPEAKER_ATT:
@@ -1946,13 +2317,13 @@ uint8_t Init_TDA(void)
     
     init_buff[0] = 0x20; // AI 1 + Subaddres 00000 - Main source sel
 	init_buff[1] = (STATE == MAIN) ? TDA_inputs[INPUT_SEL] : TDA_SOURCE_MUTE;// Main source = SE2(FM), gain = 0;
-    init_buff[2] = 0x00; // Loudless off
+    init_buff[2] = 0x00; // Loudless
     init_buff[3] = 0xC7; // CLK FM off, SM step 2.56, 0.96, I2C, off
     init_buff[4] = VOLUME; // VOL 0;
-    init_buff[5] = 0x90; // Ref out ext + treble off;
+    init_buff[5] = 0x80; // Ref out ext + treble off;
     init_buff[6] = 0x50; // mid off
     init_buff[7] = 0x50; // bass off
-    init_buff[8] = 0x7F; // sec source - mute, rear - main
+    init_buff[8] = 0x05; // sec source - mute, rear - main
     init_buff[9] = 0x00; // sub off all
     init_buff[10]= 0xFF; // mix off;
     init_buff[11]= 0x00;
