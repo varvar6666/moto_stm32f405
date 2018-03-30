@@ -86,11 +86,10 @@ int main(void)
  
     AMP_OFF;
     BT_OFF;
+    BULB_CH_ON;
     
     FLASH->KEYR = 0x45670123;
     FLASH->KEYR = 0xCDEF89AB;
-
-    Init_ADC();
 
     Init_TFT();
     TFT_send(TFT_reset,sizeof(TFT_reset)); //RESET TFT
@@ -98,42 +97,90 @@ int main(void)
     //-- Delay for TFT start --
     for(uint32_t delay = 0;delay < 10000000;delay++){};
 
-    loading_txt[8] = '2';
-    loading_txt[9] = '5';
+    loading_txt[8] = '1';
+    loading_txt[9] = '4';
     TFT_send(loading_txt, sizeof(loading_txt));
-    
-    Init_RTC();
 
-    loading_txt[8] = '5';
-    loading_txt[9] = '0';
+    Init_ADC();         //1
+        
+    loading_txt[8] = '2';
+    loading_txt[9] = '8';
+    TFT_send(loading_txt, sizeof(loading_txt));
+        
+    Init_RTC();         //2
+        
+    loading_txt[8] = '4';
+    loading_txt[9] = '2';
     TFT_send(loading_txt, sizeof(loading_txt));
     
-    Init_KEYs_TIM();
+    Init_KEYs_TIM();    //3
+        
+    loading_txt[8] = '5';
+    loading_txt[9] = '6';
+    TFT_send(loading_txt, sizeof(loading_txt));
+    
+    Init_I2C1();        //4
     
     loading_txt[8] = '7';
-    loading_txt[9] = '5';
+    loading_txt[9] = '0';
     TFT_send(loading_txt, sizeof(loading_txt));
-    
-    Init_I2C1();
         
-	Init_BT();
+	Init_BT();          //5
+    
+    loading_txt[8] = '8';
+    loading_txt[9] = '4';
+    TFT_send(loading_txt, sizeof(loading_txt));
 
-    Init_USB();
+    Init_USB();         //6->
 
     USB_res = USB_send_par(USB_CMD_SOURCE, 0x00);
     if(USB_res == 0)
     {
         USB_res = USB_send_par(USB_CMD_VOL, 0x1e);
         USB_res = USB_send_par(USB_CMD_PLAY_MODE, 0x00);
-    }
+    }                   //<-6
     
+    loading_txt[8] = '9';
+    loading_txt[9] = '8';
+    TFT_send(loading_txt, sizeof(loading_txt));
 
-		
+    uint32_t tmp_mem;
     //STATE = AUDIO_OFF;
-    STATE = (0xFF000000 & flash_read(MEM_ADDRESS)) >> 24;
-    INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
-    VOLUME = (0xFF00 & flash_read(MEM_ADDRESS)) >> 8;
-    RADIO_FREQ = (0xFFFF0000 & flash_read(RADIO_FREQ_ADR)) >> 16;
+    tmp_mem = flash_read(MEM_ADDRESS);
+    if(tmp_mem != 0xFFFFFFFF)
+    {
+        STATE = (0xFF000000 & tmp_mem) >> 24;
+        INPUT_SEL = (0xFF0000 & flash_read(MEM_ADDRESS)) >> 16;
+        VOLUME = (0xFF00 & flash_read(MEM_ADDRESS)) >> 8;
+        
+        tmp_mem = flash_read(RADIO_FREQ_ADR);
+        RADIO_FREQ = (0xFFFF0000 & tmp_mem) >> 16;
+        
+        tmp_mem = flash_read(TDA_MAIN_LOUD_ADR);
+        TDA_loudness.high_boost  = (0xFF000000 & tmp_mem) >> 24;
+        TDA_loudness.center_freq = (0xFF0000   & tmp_mem) >> 16;
+        TDA_loudness.atteniation = (0xFF00     & tmp_mem) >> 8;
+        
+        tmp_mem = flash_read(TDA_TREB_ADR);
+        TDA_treble.center_freq = (0xFF000000 & tmp_mem) >> 24;
+        TDA_treble.atteniation = (0xFF0000   & tmp_mem) >> 16;
+        
+        tmp_mem = flash_read(TDA_MIDD_ADR);
+        TDA_middle.Q_factot    = (0xFF000000 & tmp_mem) >> 24;
+        TDA_middle.center_freq = (0xFF0000   & tmp_mem) >> 16;
+        TDA_middle.atteniation = (0xFF00     & tmp_mem) >> 8;
+        
+        tmp_mem = flash_read(TDA_BASS_ADR);
+        TDA_bass.Q_factot    = (0xFF000000 & tmp_mem) >> 24;
+        TDA_bass.center_freq = (0xFF0000   & tmp_mem) >> 16;
+        TDA_bass.atteniation = (0xFF00     & tmp_mem) >> 8;
+        
+        tmp_mem = flash_read(TDA_SATT_ADR);
+        TDA_sp_att.left_front  = (0xFF000000 & tmp_mem) >> 24;
+        TDA_sp_att.right_front = (0xFF0000   & tmp_mem) >> 16;
+        TDA_sp_att.left_rear   = (0xFF00     & tmp_mem) >> 8;
+        TDA_sp_att.right_rear  = (0xFF       & tmp_mem);
+    }
 
     TFT_send(pages[STATE], sizeof(pages[STATE]));
     TFT_send(tft_apage, sizeof(tft_apage));
@@ -212,9 +259,14 @@ int main(void)
                         TFT_send(main_AUX_text, sizeof(main_AUX_text));
                     break;}				
             };
+            AMP_ON;
     }
 
     NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+    NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
+    
+    GPIOB->BSRR |= GPIO_BSRR_BS2;
+    BULB_CH_OFF;
     
     while(1)
     {
@@ -292,14 +344,14 @@ void SysTick_Handler(void)
     if (del == (SysTicksClk/2)) // Per = 1s
     {
         del = 0;
-        if (GPIOB->ODR & GPIO_ODR_OD2)
-        {
-            GPIOB->BSRR |= GPIO_BSRR_BR2;
-        }
-        else
-        {
-            GPIOB->BSRR |= GPIO_BSRR_BS2;
-        }  			
+//        if (GPIOB->ODR & GPIO_ODR_OD2)
+//        {
+//            GPIOB->BSRR |= GPIO_BSRR_BR2;
+//        }
+//        else
+//        {
+//            GPIOB->BSRR |= GPIO_BSRR_BS2;
+//        }  			
     }
 }
 
@@ -321,10 +373,11 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     delay_send++;
 
     GPIOB->BSRR |= GPIO_BSRR_BR12;
+    GPIOB->BSRR |= GPIO_BSRR_BS15;
     
     if(BT_SOUCE) // source select & OFF audio
     {
-        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        //GPIOB->BSRR |= GPIO_BSRR_BS12;
         OFF_counter++;
         if((OFF_counter >= 20)&&(STATE == MAIN))
         {
@@ -536,6 +589,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                 main_VOL_text[11] = (VOLUME > 0 ? (VOLUME-(VOLUME/10)*10) : (-VOLUME-(-VOLUME/10)*10)) + 0x30;
                 
                 TFT_send(main_VOL_text, sizeof(main_VOL_text));
+                AMP_ON;
                 delay_send = 98;
             }
         }
@@ -545,7 +599,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     
     if(BT_NEXT) // increase
     {
-        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        //GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {				
             switch (INPUT_SEL)
@@ -656,7 +710,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
     if(BT_PP) // play/pause
     {
-        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        //GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {				
             switch (INPUT_SEL)
@@ -723,7 +777,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     
     if(BT_PREV) // decrease
     {
-        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        //GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {				
             switch (INPUT_SEL)
@@ -833,7 +887,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
     
     if(BT_VOL_UP) // increase volume
     {
-        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        //GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {
             MUTED = 0;
@@ -1106,14 +1160,77 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                     TFT_send(tda_set_bass, sizeof(tda_set_bass));
                     break;
                 }
-            
+                case TDA_SET_SPEAKER_ATT:
+                {
+                    switch(TDA_SET_SATT_STATE)
+                    {
+                        case TDA_SET_SATT_L_F:
+                        {
+                            TDA_sp_att.left_front++;
+                            if(TDA_sp_att.left_front > 15) TDA_sp_att.left_front = 15;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_LF;
+                            i2c_buff[1] = TDA_sp_att.left_front > 0 ? TDA_sp_att.left_front : 16-TDA_sp_att.left_front;
+                            I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                            
+                            tda_set_satt_val[9] =   TDA_sp_att.left_front > 0 ? '+' : '-';
+                            tda_set_satt_val[10] = (TDA_sp_att.left_front > 0 ?  TDA_sp_att.left_front/10 : -TDA_sp_att.left_front/10) + 0x30;
+                            tda_set_satt_val[11] = (TDA_sp_att.left_front > 0 ? (TDA_sp_att.left_front - (TDA_sp_att.left_front/10)*10) : (-TDA_sp_att.left_front-(-TDA_sp_att.left_front/10)*10)) + 0x30;
+                            break;
+                        }
+                        case TDA_SET_SATT_R_F:
+                        {
+                            TDA_sp_att.right_front++;
+                            if(TDA_sp_att.right_front > 15) TDA_sp_att.right_front = 15;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_RF;
+                            i2c_buff[1] = TDA_sp_att.right_front > 0 ? TDA_sp_att.right_front : 16-TDA_sp_att.right_front;
+                            
+                            tda_set_satt_val[25] =  TDA_sp_att.right_front > 0 ? '+' : '-';
+                            tda_set_satt_val[26] = (TDA_sp_att.right_front > 0 ?  TDA_sp_att.right_front/10 : -TDA_sp_att.right_front/10) + 0x30;
+                            tda_set_satt_val[27] = (TDA_sp_att.right_front > 0 ? (TDA_sp_att.right_front - (TDA_sp_att.right_front/10)*10) : (-TDA_sp_att.right_front-(-TDA_sp_att.right_front/10)*10)) + 0x30;                            break;
+                        }
+                        case TDA_SET_SATT_L_R:
+                        {
+                            TDA_sp_att.left_rear++;
+                            if(TDA_sp_att.left_rear > 15) TDA_sp_att.left_rear = 15;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_LR;
+                            i2c_buff[1] = TDA_sp_att.left_rear > 0 ? TDA_sp_att.left_rear : 16-TDA_sp_att.left_rear;
+                            
+                            tda_set_satt_val[41] =  TDA_sp_att.left_rear > 0 ? '+' : '-';
+                            tda_set_satt_val[42] = (TDA_sp_att.left_rear > 0 ?  TDA_sp_att.left_rear/10 : -TDA_sp_att.left_rear/10) + 0x30;
+                            tda_set_satt_val[43] = (TDA_sp_att.left_rear > 0 ? (TDA_sp_att.left_rear - (TDA_sp_att.left_rear/10)*10) : (-TDA_sp_att.left_rear-(-TDA_sp_att.left_rear/10)*10)) + 0x30;
+                            break;
+                        }
+                        case TDA_SET_SATT_R_R:
+                        {
+                            TDA_sp_att.right_rear++;
+                            if(TDA_sp_att.right_rear > 15) TDA_sp_att.right_rear = 15;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_RR;
+                            i2c_buff[1] = TDA_sp_att.right_rear > 0 ? TDA_sp_att.right_rear : 16-TDA_sp_att.right_rear;
+                            
+                            tda_set_satt_val[57] =  TDA_sp_att.right_rear > 0 ? '+' : '-';
+                            tda_set_satt_val[58] = (TDA_sp_att.right_rear > 0 ?  TDA_sp_att.right_rear/10 : -TDA_sp_att.right_rear/10) + 0x30;
+                            tda_set_satt_val[59] = (TDA_sp_att.right_rear > 0 ? (TDA_sp_att.right_rear - (TDA_sp_att.right_rear/10)*10) : (-TDA_sp_att.right_rear-(-TDA_sp_att.right_rear/10)*10)) + 0x30;
+                            break;
+                        }
+                    }
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    TFT_send(tda_set_satt_val, sizeof(tda_set_satt_val));
+                    
+                    break;
+                }
             }
+            flash_write_newdata();
         }
     }
     
     if(BT_VOL_DOWN) // decrease volume
     {
-        GPIOB->BSRR |= GPIO_BSRR_BS12;
+        //GPIOB->BSRR |= GPIO_BSRR_BS12;
         if(STATE == MAIN)
         {
             MUTED = 0;
@@ -1282,7 +1399,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         case TDA_SET_MIDD_ATTENUATION:
                         {
                             TDA_middle.atteniation--;
-                            if(TDA_middle.atteniation < 15) TDA_middle.atteniation = -15;
+                            if(TDA_middle.atteniation < -15) TDA_middle.atteniation = -15;
                             
                             tda_set_midd[29] = (TDA_middle.atteniation > 0) ? ('+') : ('-');
                             tda_set_midd[30] = abs(TDA_middle.atteniation/10) + 0x30;
@@ -1400,8 +1517,70 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                     TFT_send(tda_set_bass, sizeof(tda_set_bass));
                     break;
                 }
-            
+                case TDA_SET_SPEAKER_ATT:
+                {
+                    switch(TDA_SET_SATT_STATE)
+                    {
+                        case TDA_SET_SATT_L_F:
+                        {
+                            TDA_sp_att.left_front--;
+                            if(TDA_sp_att.left_front < -79) TDA_sp_att.left_front = -79;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_LF;
+                            i2c_buff[1] = TDA_sp_att.left_front > 0 ? TDA_sp_att.left_front : 16-TDA_sp_att.left_front;
+                            
+                            tda_set_satt_val[9] =   TDA_sp_att.left_front > 0 ? '+' : '-';
+                            tda_set_satt_val[10] = (TDA_sp_att.left_front > 0 ?  TDA_sp_att.left_front/10 : -TDA_sp_att.left_front/10) + 0x30;
+                            tda_set_satt_val[11] = (TDA_sp_att.left_front > 0 ? (TDA_sp_att.left_front - (TDA_sp_att.left_front/10)*10) : (-TDA_sp_att.left_front-(-TDA_sp_att.left_front/10)*10)) + 0x30;
+                            break;
+                        }
+                        case TDA_SET_SATT_R_F:
+                        {
+                            TDA_sp_att.right_front--;
+                            if(TDA_sp_att.right_front < -79) TDA_sp_att.right_front = -79;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_RF;
+                            i2c_buff[1] = TDA_sp_att.right_front > 0 ? TDA_sp_att.right_front : 16-TDA_sp_att.right_front;
+                            
+                            tda_set_satt_val[25] =  TDA_sp_att.right_front > 0 ? '+' : '-';
+                            tda_set_satt_val[26] = (TDA_sp_att.right_front > 0 ?  TDA_sp_att.right_front/10 : -TDA_sp_att.right_front/10) + 0x30;
+                            tda_set_satt_val[27] = (TDA_sp_att.right_front > 0 ? (TDA_sp_att.right_front - (TDA_sp_att.right_front/10)*10) : (-TDA_sp_att.right_front-(-TDA_sp_att.right_front/10)*10)) + 0x30;                            break;
+                        }
+                        case TDA_SET_SATT_L_R:
+                        {
+                            TDA_sp_att.left_rear--;
+                            if(TDA_sp_att.left_rear < -79) TDA_sp_att.left_rear = -79;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_LR;
+                            i2c_buff[1] = TDA_sp_att.left_rear > 0 ? TDA_sp_att.left_rear : 16-TDA_sp_att.left_rear;
+                            
+                            tda_set_satt_val[41] =  TDA_sp_att.left_rear > 0 ? '+' : '-';
+                            tda_set_satt_val[42] = (TDA_sp_att.left_rear > 0 ?  TDA_sp_att.left_rear/10 : -TDA_sp_att.left_rear/10) + 0x30;
+                            tda_set_satt_val[43] = (TDA_sp_att.left_rear > 0 ? (TDA_sp_att.left_rear - (TDA_sp_att.left_rear/10)*10) : (-TDA_sp_att.left_rear-(-TDA_sp_att.left_rear/10)*10)) + 0x30;
+                            break;
+                        }
+                        case TDA_SET_SATT_R_R:
+                        {
+                            TDA_sp_att.right_rear--;
+                            if(TDA_sp_att.right_rear < -79) TDA_sp_att.right_rear = -79;
+                            
+                            i2c_buff[0] = TDA_SPEAKER_ATT_RR;
+                            i2c_buff[1] = TDA_sp_att.right_rear > 0 ? TDA_sp_att.right_rear : 16-TDA_sp_att.right_rear;
+                            
+                            tda_set_satt_val[57] =  TDA_sp_att.right_rear > 0 ? '+' : '-';
+                            tda_set_satt_val[58] = (TDA_sp_att.right_rear > 0 ?  TDA_sp_att.right_rear/10 : -TDA_sp_att.right_rear/10) + 0x30;
+                            tda_set_satt_val[59] = (TDA_sp_att.right_rear > 0 ? (TDA_sp_att.right_rear - (TDA_sp_att.right_rear/10)*10) : (-TDA_sp_att.right_rear-(-TDA_sp_att.right_rear/10)*10)) + 0x30;
+                            break;
+                        }
+                    }
+                    I2C_res = I2C1_Send(TDA7419_ADDRESS, i2c_buff, sizeof(i2c_buff));
+                    
+                    TFT_send(tda_set_satt_val, sizeof(tda_set_satt_val));
+                    
+                    break;
+                }
             }
+            flash_write_newdata();
         }
     }
     
@@ -1759,7 +1938,24 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
                         TDA_SET_SATT_STATE = TDA_SET_SATT_L_F;
                         TFT_send(tda_set_satt[TDA_SET_SATT_STATE], sizeof(tda_set_satt[TDA_SET_SATT_STATE]));
                         TFT_send(tda_set_satt[TDA_SET_SATT_STATE], sizeof(tda_set_satt[TDA_SET_SATT_STATE]));
+                        
+                        tda_set_satt_val[9] =   TDA_sp_att.left_front > 0 ? '+' : '-';
+                        tda_set_satt_val[10] = (TDA_sp_att.left_front > 0 ?  TDA_sp_att.left_front/10 : -TDA_sp_att.left_front/10) + 0x30;
+                        tda_set_satt_val[11] = (TDA_sp_att.left_front > 0 ? (TDA_sp_att.left_front - (TDA_sp_att.left_front/10)*10) : (-TDA_sp_att.left_front-(-TDA_sp_att.left_front/10)*10)) + 0x30;
+                        
+                        tda_set_satt_val[25] =  TDA_sp_att.right_front > 0 ? '+' : '-';
+                        tda_set_satt_val[26] = (TDA_sp_att.right_front > 0 ?  TDA_sp_att.right_front/10 : -TDA_sp_att.right_front/10) + 0x30;
+                        tda_set_satt_val[27] = (TDA_sp_att.right_front > 0 ? (TDA_sp_att.right_front - (TDA_sp_att.right_front/10)*10) : (-TDA_sp_att.right_front-(-TDA_sp_att.right_front/10)*10)) + 0x30;
 
+                        tda_set_satt_val[41] =  TDA_sp_att.left_rear > 0 ? '+' : '-';
+                        tda_set_satt_val[42] = (TDA_sp_att.left_rear > 0 ?  TDA_sp_att.left_rear/10 : -TDA_sp_att.left_rear/10) + 0x30;
+                        tda_set_satt_val[43] = (TDA_sp_att.left_rear > 0 ? (TDA_sp_att.left_rear - (TDA_sp_att.left_rear/10)*10) : (-TDA_sp_att.left_rear-(-TDA_sp_att.left_rear/10)*10)) + 0x30;
+                        
+                        tda_set_satt_val[57] =  TDA_sp_att.right_rear > 0 ? '+' : '-';
+                        tda_set_satt_val[58] = (TDA_sp_att.right_rear > 0 ?  TDA_sp_att.right_rear/10 : -TDA_sp_att.right_rear/10) + 0x30;
+                        tda_set_satt_val[59] = (TDA_sp_att.right_rear > 0 ? (TDA_sp_att.right_rear - (TDA_sp_att.right_rear/10)*10) : (-TDA_sp_att.right_rear-(-TDA_sp_att.right_rear/10)*10)) + 0x30;
+                        
+                        TFT_send(tda_set_satt_val, sizeof(tda_set_satt_val));
                         break;
                     }
                 }
@@ -1792,6 +1988,8 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) // parce buttons
 
         TFT_send(TFT_TIME, sizeof(TFT_TIME));
     }
+    
+    GPIOB->BSRR |= GPIO_BSRR_BR15;
 }
 
 void DMA1_Stream0_IRQHandler(void)
@@ -1840,8 +2038,8 @@ void DMA2_Stream0_IRQHandler(void)
                    DMA_LIFCR_CTEIF0 |
                    DMA_LIFCR_CHTIF0 |
                    DMA_LIFCR_CTCIF0;
-	uint8_t V_IN = (ADC_Buff[0]*158)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
-	uint8_t P_IN = (ADC_Buff[1]*158)/0xFFF; //159 = 3.18(Vref) * 5(devider on pcb) * 10(for calculations)
+	uint8_t V_IN = (ADC_Buff[0]*172)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
+	uint8_t P_IN = (ADC_Buff[1]*172)/0xFFF; //165 = 3.3(Vref) * 5(devider on pcb) * 10(for calculations)
     
     ADC_text[9]  =  V_IN/100 + 0x30;
     ADC_text[10] = (V_IN -(V_IN/100)*100)/10 + 0x30;
@@ -1881,6 +2079,7 @@ void Init_GPIO(void)
                     GPIO_MODE_OUTPUT_PP << PIN15*2;  // Red   2
 	
     //Amplifier ON/OFF
+    GPIOB->MODER &= ~((uint32_t)0x3     << PIN3*2);
     GPIOB->MODER |= GPIO_MODE_OUTPUT_PP << PIN3*2;
     
     //BT ON/OFF
@@ -2239,8 +2438,6 @@ void Init_KEYs_TIM(void)
     TIM14->ARR = 2000-1;
     TIM14->DIER = TIM_DIER_UIE;
     TIM14->CR1 = TIM_CR1_CEN; 
-    
-    NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);			
 }
 
 void Init_I2C1(void)
@@ -2316,23 +2513,23 @@ uint8_t Init_TDA(void)
     uint8_t init_buff[19];
     
     init_buff[0] = 0x20; // AI 1 + Subaddres 00000 - Main source sel
-	init_buff[1] = (STATE == MAIN) ? TDA_inputs[INPUT_SEL] : TDA_SOURCE_MUTE;// Main source = SE2(FM), gain = 0;
-    init_buff[2] = 0x00; // Loudless
+	init_buff[1] = (STATE == MAIN) ? TDA_inputs[INPUT_SEL] : TDA_SOURCE_MUTE; // Main source = SE2(FM), gain = 0;
+    init_buff[2] = (TDA_loudness.atteniation & 0xF)|((TDA_loudness.center_freq << 4) & 0x30)| ((TDA_loudness.high_boost << 6) & 0x40); // Loudless
     init_buff[3] = 0xC7; // CLK FM off, SM step 2.56, 0.96, I2C, off
-    init_buff[4] = VOLUME; // VOL 0;
-    init_buff[5] = 0x80; // Ref out ext + treble off;
-    init_buff[6] = 0x50; // mid off
-    init_buff[7] = 0x50; // bass off
+    init_buff[4] = VOLUME > 0 ? VOLUME : 16-VOLUME; // VOLUME
+    init_buff[5] = 0x80 | ((TDA_treble.center_freq << 5)&0x60) | (TDA_treble.atteniation > 0 ? (TDA_treble.atteniation | 0x10):(abs(TDA_treble.atteniation))); // Ref out ext + treble off;
+    init_buff[6] = ((TDA_middle.Q_factot << 5) & 0x60) | ((TDA_middle.atteniation > 0 ? (TDA_middle.atteniation | 0x10):(abs(TDA_middle.atteniation))) & 0x1F); // mid off
+    init_buff[7] = ((TDA_bass.Q_factot << 5) & 0x60) | ((TDA_bass.atteniation > 0 ? (TDA_bass.atteniation | 0x10):(abs(TDA_bass.atteniation))) & 0x1F); // bass off
     init_buff[8] = 0x05; // sec source - mute, rear - main
-    init_buff[9] = 0x00; // sub off all
+    init_buff[9] = ((TDA_bass.center_freq << 4) & 0x30) | ((TDA_middle.center_freq << 2) & 0xC); // sub off all
     init_buff[10]= 0xFF; // mix off;
-    init_buff[11]= 0x00;
-    init_buff[12]= 0x00;
-    init_buff[13]= 0x00;
-    init_buff[14]= 0x00;
-    init_buff[15]= 0x00;
-    init_buff[16]= 0x00;
-    init_buff[17]= 0x39; // SA on
+    init_buff[11]= TDA_sp_att.left_front  > 0 ? TDA_sp_att.left_front  : 16-TDA_sp_att.left_front; //Lefr  Front
+    init_buff[12]= TDA_sp_att.right_front > 0 ? TDA_sp_att.right_front : 16-TDA_sp_att.right_front;//Right Front
+    init_buff[13]= TDA_sp_att.left_rear   > 0 ? TDA_sp_att.left_rear   : 16-TDA_sp_att.left_rear;  //Lefr  Rear
+    init_buff[14]= TDA_sp_att.right_rear  > 0 ? TDA_sp_att.right_rear  : 16-TDA_sp_att.right_rear; //Right Rear
+    init_buff[15]= 0x00; //Mix level
+    init_buff[16]= 0x00; //Sub att
+    init_buff[17]= 0x39; //SA on
     init_buff[18]= 0x00; //test mode off
     
     return I2C1_Send(TDA7419_ADDRESS, init_buff, sizeof(init_buff));
@@ -2379,10 +2576,33 @@ void flash_write(uint32_t address, uint32_t data)
 
 void flash_write_newdata(void)
 {
+    uint32_t tmp_mem;
+    
 	flash_erase_sector(3); //start from 0x0800C000
-	flash_write(MEM_ADDRESS, ((STATE << 24 ) | (INPUT_SEL << 16) | (0xFF00 & (VOLUME << 8 ))));
-	flash_write(RADIO_FREQ_ADR, RADIO_FREQ << 16);
-
+	if(STATE == TDA_SETT)
+    tmp_mem = (MAIN << 24 )   | (INPUT_SEL << 16) | (0xFF00 & (VOLUME << 8 ));
+    else
+    tmp_mem = (STATE << 24 )  | (INPUT_SEL << 16) | (0xFF00 & (VOLUME << 8 ));
+    
+    flash_write(MEM_ADDRESS, tmp_mem);
+    
+    tmp_mem = RADIO_FREQ << 16;
+	flash_write(RADIO_FREQ_ADR, tmp_mem); //Radio Freq
+    
+    tmp_mem = (TDA_loudness.high_boost << 24) | (TDA_loudness.center_freq << 16) | (0xFF00 & (TDA_loudness.atteniation << 8));
+    flash_write(TDA_MAIN_LOUD_ADR, tmp_mem); //Main loud
+    
+    tmp_mem = (TDA_treble.center_freq  << 24) | (0xFF0000 & (TDA_treble.atteniation   << 16));
+    flash_write(TDA_TREB_ADR, tmp_mem); //Treble
+    
+    tmp_mem = (TDA_middle.Q_factot     << 24) | (TDA_middle.center_freq   << 16) | (0xFF00 & (TDA_middle.atteniation   << 8));
+    flash_write(TDA_MIDD_ADR, tmp_mem); //Middle
+    
+    tmp_mem = (TDA_bass.Q_factot       << 24) | (TDA_bass.center_freq     << 16) | (0xFF00 & (TDA_bass.atteniation     << 8));
+    flash_write(TDA_BASS_ADR, tmp_mem); //Bass
+    
+    tmp_mem = (0xFF000000 & (TDA_sp_att.left_front   << 24)) | (0xFF0000 & (TDA_sp_att.right_front   << 16)) | (0xFF00 & (TDA_sp_att.left_rear     << 8)) | (TDA_sp_att.right_rear & 0xFF);
+    flash_write(TDA_SATT_ADR, tmp_mem); //Speaker attenuation
 }
 
 void Init_ADC(void)

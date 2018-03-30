@@ -13,7 +13,6 @@ Section Cross References
     main.o(i.Init_ADC) refers to main.o(.data) for ADC_Buff
     main.o(i.Init_BT) refers to main.o(i.__NVIC_EnableIRQ) for __NVIC_EnableIRQ
     main.o(i.Init_BT) refers to main.o(.bss) for bt_rx_buff
-    main.o(i.Init_KEYs_TIM) refers to main.o(i.__NVIC_EnableIRQ) for __NVIC_EnableIRQ
     main.o(i.Init_TDA) refers to main.o(i.I2C1_Send) for I2C1_Send
     main.o(i.Init_TDA) refers to main.o(.data) for STATE
     main.o(i.Init_TDA) refers to main.o(.constdata) for TDA_inputs
@@ -39,9 +38,9 @@ Section Cross References
     main.o(i.flash_write_newdata) refers to main.o(.data) for STATE
     main.o(i.main) refers to main.o(i.Init_RCC) for Init_RCC
     main.o(i.main) refers to main.o(i.Init_GPIO) for Init_GPIO
-    main.o(i.main) refers to main.o(i.Init_ADC) for Init_ADC
     main.o(i.main) refers to main.o(i.Init_TFT) for Init_TFT
     main.o(i.main) refers to main.o(i.TFT_send) for TFT_send
+    main.o(i.main) refers to main.o(i.Init_ADC) for Init_ADC
     main.o(i.main) refers to main.o(i.Init_RTC) for Init_RTC
     main.o(i.main) refers to main.o(i.Init_KEYs_TIM) for Init_KEYs_TIM
     main.o(i.main) refers to main.o(i.Init_I2C1) for Init_I2C1
@@ -53,9 +52,9 @@ Section Cross References
     main.o(i.main) refers to main.o(i.TEA_set_freq) for TEA_set_freq
     main.o(i.main) refers to main.o(i.BT_send) for BT_send
     main.o(i.main) refers to main.o(i.USB_send) for USB_send
-    main.o(i.main) refers to main.o(i.__NVIC_EnableIRQ) for __NVIC_EnableIRQ
     main.o(i.main) refers to main.o(.data) for TFT_reset
     main.o(i.main) refers to main.o(.bss) for usb_track_info
+    main.o(i.main) refers to main.o(i.__NVIC_EnableIRQ) for __NVIC_EnableIRQ
     stm32f4xx_hal.o(i.HAL_DeInit) refers to stm32f4xx_hal.o(i.HAL_MspDeInit) for HAL_MspDeInit
     stm32f4xx_hal.o(i.HAL_Delay) refers to stm32f4xx_hal.o(i.HAL_GetTick) for HAL_GetTick
     stm32f4xx_hal.o(i.HAL_GetTick) refers to stm32f4xx_hal.o(.data) for uwTick
@@ -1465,48 +1464,48 @@ Image Symbol Table
     i.Init_ADC                               0x080005e8   Section        0  main.o(i.Init_ADC)
     i.Init_BT                                0x080006b8   Section        0  main.o(i.Init_BT)
     i.Init_GPIO                              0x08000758   Section        0  main.o(i.Init_GPIO)
-    i.Init_I2C1                              0x0800092c   Section        0  main.o(i.Init_I2C1)
-    i.Init_KEYs_TIM                          0x08000960   Section        0  main.o(i.Init_KEYs_TIM)
-    i.Init_RCC                               0x08000994   Section        0  main.o(i.Init_RCC)
-    i.Init_RTC                               0x08000ae8   Section        0  main.o(i.Init_RTC)
-    i.Init_TDA                               0x08000b60   Section        0  main.o(i.Init_TDA)
-    i.Init_TFT                               0x08000bfc   Section        0  main.o(i.Init_TFT)
-    i.Init_USB                               0x08000c50   Section        0  main.o(i.Init_USB)
-    i.SysTick_Handler                        0x08000c78   Section        0  main.o(i.SysTick_Handler)
-    i.SystemInit                             0x08000ccc   Section        0  system_stm32f4xx.o(i.SystemInit)
-    i.TEA_set_freq                           0x08000d30   Section        0  main.o(i.TEA_set_freq)
-    i.TFT_send                               0x08000d74   Section        0  main.o(i.TFT_send)
-    i.TIM8_TRG_COM_TIM14_IRQHandler          0x08000d9c   Section        0  main.o(i.TIM8_TRG_COM_TIM14_IRQHandler)
-    i.UART5_IRQHandler                       0x080038a0   Section        0  main.o(i.UART5_IRQHandler)
-    i.USB_send                               0x080038d4   Section        0  main.o(i.USB_send)
-    i.USB_send_par                           0x08003b18   Section        0  main.o(i.USB_send_par)
-    i.__NVIC_EnableIRQ                       0x08003bec   Section        0  main.o(i.__NVIC_EnableIRQ)
-    __NVIC_EnableIRQ                         0x08003bed   Thumb Code    26  main.o(i.__NVIC_EnableIRQ)
-    i.flash_erase_sector                     0x08003c08   Section        0  main.o(i.flash_erase_sector)
-    i.flash_read                             0x08003c48   Section        0  main.o(i.flash_read)
-    i.flash_ready                            0x08003c50   Section        0  main.o(i.flash_ready)
-    i.flash_write                            0x08003c60   Section        0  main.o(i.flash_write)
-    i.flash_write_newdata                    0x08003ca4   Section        0  main.o(i.flash_write_newdata)
-    i.main                                   0x08003cf8   Section        0  main.o(i.main)
-    x$fpl$fpinit                             0x080040fc   Section       10  fpinit.o(x$fpl$fpinit)
-    $v0                                      0x080040fc   Number         0  fpinit.o(x$fpl$fpinit)
-    .constdata                               0x08004106   Section        4  main.o(.constdata)
-    .data                                    0x20000000   Section     1667  main.o(.data)
-    del                                      0x20000678   Data           4  main.o(.data)
-    hour                                     0x2000067c   Data           1  main.o(.data)
-    min                                      0x2000067d   Data           1  main.o(.data)
-    mon                                      0x2000067e   Data           1  main.o(.data)
-    day                                      0x2000067f   Data           1  main.o(.data)
-    week_day                                 0x20000680   Data           1  main.o(.data)
-    year                                     0x20000681   Data           1  main.o(.data)
-    delay_send                               0x20000682   Data           1  main.o(.data)
-    .bss                                     0x20000684   Section       52  main.o(.bss)
-    .bss                                     0x200006b8   Section       96  libspace.o(.bss)
-    HEAP                                     0x20000718   Section      512  startup_stm32f405xx.o(HEAP)
-    Heap_Mem                                 0x20000718   Data         512  startup_stm32f405xx.o(HEAP)
-    STACK                                    0x20000918   Section     1024  startup_stm32f405xx.o(STACK)
-    Stack_Mem                                0x20000918   Data        1024  startup_stm32f405xx.o(STACK)
-    __initial_sp                             0x20000d18   Data           0  startup_stm32f405xx.o(STACK)
+    i.Init_I2C1                              0x08000938   Section        0  main.o(i.Init_I2C1)
+    i.Init_KEYs_TIM                          0x0800096c   Section        0  main.o(i.Init_KEYs_TIM)
+    i.Init_RCC                               0x08000998   Section        0  main.o(i.Init_RCC)
+    i.Init_RTC                               0x08000aec   Section        0  main.o(i.Init_RTC)
+    i.Init_TDA                               0x08000b64   Section        0  main.o(i.Init_TDA)
+    i.Init_TFT                               0x08000d78   Section        0  main.o(i.Init_TFT)
+    i.Init_USB                               0x08000dcc   Section        0  main.o(i.Init_USB)
+    i.SysTick_Handler                        0x08000df4   Section        0  main.o(i.SysTick_Handler)
+    i.SystemInit                             0x08000e18   Section        0  system_stm32f4xx.o(i.SystemInit)
+    i.TEA_set_freq                           0x08000e7c   Section        0  main.o(i.TEA_set_freq)
+    i.TFT_send                               0x08000ec0   Section        0  main.o(i.TFT_send)
+    i.TIM8_TRG_COM_TIM14_IRQHandler          0x08000ee8   Section        0  main.o(i.TIM8_TRG_COM_TIM14_IRQHandler)
+    i.UART5_IRQHandler                       0x08004354   Section        0  main.o(i.UART5_IRQHandler)
+    i.USB_send                               0x08004388   Section        0  main.o(i.USB_send)
+    i.USB_send_par                           0x080045cc   Section        0  main.o(i.USB_send_par)
+    i.__NVIC_EnableIRQ                       0x080046a0   Section        0  main.o(i.__NVIC_EnableIRQ)
+    __NVIC_EnableIRQ                         0x080046a1   Thumb Code    26  main.o(i.__NVIC_EnableIRQ)
+    i.flash_erase_sector                     0x080046bc   Section        0  main.o(i.flash_erase_sector)
+    i.flash_read                             0x080046fc   Section        0  main.o(i.flash_read)
+    i.flash_ready                            0x08004704   Section        0  main.o(i.flash_ready)
+    i.flash_write                            0x08004714   Section        0  main.o(i.flash_write)
+    i.flash_write_newdata                    0x08004758   Section        0  main.o(i.flash_write_newdata)
+    i.main                                   0x080048c4   Section        0  main.o(i.main)
+    x$fpl$fpinit                             0x08004e08   Section       10  fpinit.o(x$fpl$fpinit)
+    $v0                                      0x08004e08   Number         0  fpinit.o(x$fpl$fpinit)
+    .constdata                               0x08004e12   Section        4  main.o(.constdata)
+    .data                                    0x20000000   Section     1731  main.o(.data)
+    del                                      0x200006b8   Data           4  main.o(.data)
+    hour                                     0x200006bc   Data           1  main.o(.data)
+    min                                      0x200006bd   Data           1  main.o(.data)
+    mon                                      0x200006be   Data           1  main.o(.data)
+    day                                      0x200006bf   Data           1  main.o(.data)
+    week_day                                 0x200006c0   Data           1  main.o(.data)
+    year                                     0x200006c1   Data           1  main.o(.data)
+    delay_send                               0x200006c2   Data           1  main.o(.data)
+    .bss                                     0x200006c4   Section       52  main.o(.bss)
+    .bss                                     0x200006f8   Section       96  libspace.o(.bss)
+    HEAP                                     0x20000758   Section      512  startup_stm32f405xx.o(HEAP)
+    Heap_Mem                                 0x20000758   Data         512  startup_stm32f405xx.o(HEAP)
+    STACK                                    0x20000958   Section     1024  startup_stm32f405xx.o(STACK)
+    Stack_Mem                                0x20000958   Data        1024  startup_stm32f405xx.o(STACK)
+    __initial_sp                             0x20000d58   Data           0  startup_stm32f405xx.o(STACK)
 
     Global Symbols
 
@@ -1696,34 +1695,34 @@ Image Symbol Table
     I2C1_Send                                0x080004f5   Thumb Code   240  main.o(i.I2C1_Send)
     Init_ADC                                 0x080005e9   Thumb Code   182  main.o(i.Init_ADC)
     Init_BT                                  0x080006b9   Thumb Code   136  main.o(i.Init_BT)
-    Init_GPIO                                0x08000759   Thumb Code   440  main.o(i.Init_GPIO)
-    Init_I2C1                                0x0800092d   Thumb Code    42  main.o(i.Init_I2C1)
-    Init_KEYs_TIM                            0x08000961   Thumb Code    42  main.o(i.Init_KEYs_TIM)
-    Init_RCC                                 0x08000995   Thumb Code   324  main.o(i.Init_RCC)
-    Init_RTC                                 0x08000ae9   Thumb Code   112  main.o(i.Init_RTC)
-    Init_TDA                                 0x08000b61   Thumb Code   140  main.o(i.Init_TDA)
-    Init_TFT                                 0x08000bfd   Thumb Code    66  main.o(i.Init_TFT)
-    Init_USB                                 0x08000c51   Thumb Code    30  main.o(i.Init_USB)
-    SysTick_Handler                          0x08000c79   Thumb Code    74  main.o(i.SysTick_Handler)
-    SystemInit                               0x08000ccd   Thumb Code    82  system_stm32f4xx.o(i.SystemInit)
-    TEA_set_freq                             0x08000d31   Thumb Code    64  main.o(i.TEA_set_freq)
-    TFT_send                                 0x08000d75   Thumb Code    36  main.o(i.TFT_send)
-    TIM8_TRG_COM_TIM14_IRQHandler            0x08000d9d   Thumb Code 11000  main.o(i.TIM8_TRG_COM_TIM14_IRQHandler)
-    UART5_IRQHandler                         0x080038a1   Thumb Code    42  main.o(i.UART5_IRQHandler)
-    USB_send                                 0x080038d5   Thumb Code   556  main.o(i.USB_send)
-    USB_send_par                             0x08003b19   Thumb Code   194  main.o(i.USB_send_par)
-    flash_erase_sector                       0x08003c09   Thumb Code    60  main.o(i.flash_erase_sector)
-    flash_read                               0x08003c49   Thumb Code     6  main.o(i.flash_read)
-    flash_ready                              0x08003c51   Thumb Code    12  main.o(i.flash_ready)
-    flash_write                              0x08003c61   Thumb Code    64  main.o(i.flash_write)
-    flash_write_newdata                      0x08003ca5   Thumb Code    62  main.o(i.flash_write_newdata)
-    main                                     0x08003cf9   Thumb Code   922  main.o(i.main)
-    _fp_init                                 0x080040fd   Thumb Code    10  fpinit.o(x$fpl$fpinit)
-    __fplib_config_fpu_vfp                   0x08004105   Thumb Code     0  fpinit.o(x$fpl$fpinit)
-    __fplib_config_pureend_doubles           0x08004105   Thumb Code     0  fpinit.o(x$fpl$fpinit)
-    TDA_inputs                               0x08004106   Data           4  main.o(.constdata)
-    Region$$Table$$Base                      0x0800410c   Number         0  anon$$obj.o(Region$$Table)
-    Region$$Table$$Limit                     0x0800412c   Number         0  anon$$obj.o(Region$$Table)
+    Init_GPIO                                0x08000759   Thumb Code   450  main.o(i.Init_GPIO)
+    Init_I2C1                                0x08000939   Thumb Code    42  main.o(i.Init_I2C1)
+    Init_KEYs_TIM                            0x0800096d   Thumb Code    34  main.o(i.Init_KEYs_TIM)
+    Init_RCC                                 0x08000999   Thumb Code   324  main.o(i.Init_RCC)
+    Init_RTC                                 0x08000aed   Thumb Code   112  main.o(i.Init_RTC)
+    Init_TDA                                 0x08000b65   Thumb Code   496  main.o(i.Init_TDA)
+    Init_TFT                                 0x08000d79   Thumb Code    66  main.o(i.Init_TFT)
+    Init_USB                                 0x08000dcd   Thumb Code    30  main.o(i.Init_USB)
+    SysTick_Handler                          0x08000df5   Thumb Code    30  main.o(i.SysTick_Handler)
+    SystemInit                               0x08000e19   Thumb Code    82  system_stm32f4xx.o(i.SystemInit)
+    TEA_set_freq                             0x08000e7d   Thumb Code    64  main.o(i.TEA_set_freq)
+    TFT_send                                 0x08000ec1   Thumb Code    36  main.o(i.TFT_send)
+    TIM8_TRG_COM_TIM14_IRQHandler            0x08000ee9   Thumb Code 13386  main.o(i.TIM8_TRG_COM_TIM14_IRQHandler)
+    UART5_IRQHandler                         0x08004355   Thumb Code    42  main.o(i.UART5_IRQHandler)
+    USB_send                                 0x08004389   Thumb Code   556  main.o(i.USB_send)
+    USB_send_par                             0x080045cd   Thumb Code   194  main.o(i.USB_send_par)
+    flash_erase_sector                       0x080046bd   Thumb Code    60  main.o(i.flash_erase_sector)
+    flash_read                               0x080046fd   Thumb Code     6  main.o(i.flash_read)
+    flash_ready                              0x08004705   Thumb Code    12  main.o(i.flash_ready)
+    flash_write                              0x08004715   Thumb Code    64  main.o(i.flash_write)
+    flash_write_newdata                      0x08004759   Thumb Code   322  main.o(i.flash_write_newdata)
+    main                                     0x080048c5   Thumb Code  1324  main.o(i.main)
+    _fp_init                                 0x08004e09   Thumb Code    10  fpinit.o(x$fpl$fpinit)
+    __fplib_config_fpu_vfp                   0x08004e11   Thumb Code     0  fpinit.o(x$fpl$fpinit)
+    __fplib_config_pureend_doubles           0x08004e11   Thumb Code     0  fpinit.o(x$fpl$fpinit)
+    TDA_inputs                               0x08004e12   Data           4  main.o(.constdata)
+    Region$$Table$$Base                      0x08004e18   Number         0  anon$$obj.o(Region$$Table)
+    Region$$Table$$Limit                     0x08004e38   Number         0  anon$$obj.o(Region$$Table)
     TFT_reset                                0x20000000   Data           7  main.o(.data)
     loading_txt                              0x20000007   Data          13  main.o(.data)
     TFT_TIME                                 0x20000014   Data          56  main.o(.data)
@@ -1751,39 +1750,40 @@ Image Symbol Table
     tda_set_treb                             0x2000058a   Data          39  main.o(.data)
     tda_set_midd                             0x200005b1   Data          56  main.o(.data)
     tda_set_bass                             0x200005e9   Data          55  main.o(.data)
-    bt_tx_query                              0x20000620   Data          35  main.o(.data)
-    USB_command                              0x20000643   Data           4  main.o(.data)
-    USB_command5                             0x20000647   Data           5  main.o(.data)
-    STATE                                    0x2000064c   Data           1  main.o(.data)
-    SET_TIME_STATE                           0x2000064d   Data           1  main.o(.data)
-    INPUT_SEL                                0x2000064e   Data           1  main.o(.data)
-    prev_state                               0x2000064f   Data           1  main.o(.data)
-    TDA_SET_STATE                            0x20000650   Data           1  main.o(.data)
-    TDA_SET_LOUD_STATE                       0x20000651   Data           1  main.o(.data)
-    TDA_SET_TREB_STATE                       0x20000652   Data           1  main.o(.data)
-    TDA_SET_MIDD_STATE                       0x20000653   Data           1  main.o(.data)
-    TDA_SET_BASS_STATE                       0x20000654   Data           1  main.o(.data)
-    TDA_SET_SATT_STATE                       0x20000655   Data           1  main.o(.data)
-    OFF_counter                              0x20000656   Data           1  main.o(.data)
-    I2C_res                                  0x20000657   Data           1  main.o(.data)
-    USB_res                                  0x20000658   Data           1  main.o(.data)
-    RADIO_FREQ                               0x2000065a   Data           2  main.o(.data)
-    BT_Status                                0x2000065c   Data           1  main.o(.data)
-    usb_status                               0x2000065d   Data           1  main.o(.data)
-    usb_play_mode                            0x2000065e   Data           1  main.o(.data)
-    VOLUME                                   0x2000065f   Data           1  main.o(.data)
-    MUTED                                    0x20000660   Data           1  main.o(.data)
-    ADC_Buff                                 0x20000662   Data           4  main.o(.data)
-    TDA_loudness                             0x20000666   Data           3  main.o(.data)
-    TDA_treble                               0x20000669   Data           2  main.o(.data)
-    TDA_middle                               0x2000066b   Data           3  main.o(.data)
-    TDA_bass                                 0x2000066e   Data           3  main.o(.data)
-    TDA_sp_att                               0x20000671   Data           4  main.o(.data)
-    bt_rx_buff                               0x20000684   Data          20  main.o(.bss)
-    usb_rx_buff                              0x20000698   Data          11  main.o(.bss)
-    usb_track_info                           0x200006a4   Data          20  main.o(.bss)
-    __libspace_start                         0x200006b8   Data          96  libspace.o(.bss)
-    __temporary_stack_top$libspace           0x20000718   Data           0  libspace.o(.bss)
+    tda_set_satt_val                         0x20000620   Data          64  main.o(.data)
+    bt_tx_query                              0x20000660   Data          35  main.o(.data)
+    USB_command                              0x20000683   Data           4  main.o(.data)
+    USB_command5                             0x20000687   Data           5  main.o(.data)
+    STATE                                    0x2000068c   Data           1  main.o(.data)
+    SET_TIME_STATE                           0x2000068d   Data           1  main.o(.data)
+    INPUT_SEL                                0x2000068e   Data           1  main.o(.data)
+    prev_state                               0x2000068f   Data           1  main.o(.data)
+    TDA_SET_STATE                            0x20000690   Data           1  main.o(.data)
+    TDA_SET_LOUD_STATE                       0x20000691   Data           1  main.o(.data)
+    TDA_SET_TREB_STATE                       0x20000692   Data           1  main.o(.data)
+    TDA_SET_MIDD_STATE                       0x20000693   Data           1  main.o(.data)
+    TDA_SET_BASS_STATE                       0x20000694   Data           1  main.o(.data)
+    TDA_SET_SATT_STATE                       0x20000695   Data           1  main.o(.data)
+    OFF_counter                              0x20000696   Data           1  main.o(.data)
+    I2C_res                                  0x20000697   Data           1  main.o(.data)
+    USB_res                                  0x20000698   Data           1  main.o(.data)
+    RADIO_FREQ                               0x2000069a   Data           2  main.o(.data)
+    BT_Status                                0x2000069c   Data           1  main.o(.data)
+    usb_status                               0x2000069d   Data           1  main.o(.data)
+    usb_play_mode                            0x2000069e   Data           1  main.o(.data)
+    VOLUME                                   0x2000069f   Data           1  main.o(.data)
+    MUTED                                    0x200006a0   Data           1  main.o(.data)
+    ADC_Buff                                 0x200006a2   Data           4  main.o(.data)
+    TDA_loudness                             0x200006a6   Data           3  main.o(.data)
+    TDA_treble                               0x200006a9   Data           2  main.o(.data)
+    TDA_middle                               0x200006ab   Data           3  main.o(.data)
+    TDA_bass                                 0x200006ae   Data           3  main.o(.data)
+    TDA_sp_att                               0x200006b1   Data           4  main.o(.data)
+    bt_rx_buff                               0x200006c4   Data          20  main.o(.bss)
+    usb_rx_buff                              0x200006d8   Data          11  main.o(.bss)
+    usb_track_info                           0x200006e4   Data          20  main.o(.bss)
+    __libspace_start                         0x200006f8   Data          96  libspace.o(.bss)
+    __temporary_stack_top$libspace           0x20000758   Data           0  libspace.o(.bss)
 
 
 
@@ -1793,9 +1793,9 @@ Memory Map of the image
 
   Image Entry point : 0x08000189
 
-  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x000047b0, Max: 0x00100000, ABSOLUTE, COMPRESSED[0x000043b8])
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x000054fc, Max: 0x00100000, ABSOLUTE, COMPRESSED[0x000050d0])
 
-    Execution Region ER_IROM1 (Base: 0x08000000, Size: 0x0000412c, Max: 0x00100000, ABSOLUTE)
+    Execution Region ER_IROM1 (Base: 0x08000000, Size: 0x00004e38, Max: 0x00100000, ABSOLUTE)
 
     Base Addr    Size         Type   Attr      Idx    E Section Name        Object
 
@@ -1862,47 +1862,47 @@ Memory Map of the image
     0x080004f4   0x000000f4   Code   RO            7    i.I2C1_Send         main.o
     0x080005e8   0x000000d0   Code   RO            8    i.Init_ADC          main.o
     0x080006b8   0x000000a0   Code   RO            9    i.Init_BT           main.o
-    0x08000758   0x000001d4   Code   RO           10    i.Init_GPIO         main.o
-    0x0800092c   0x00000034   Code   RO           11    i.Init_I2C1         main.o
-    0x08000960   0x00000034   Code   RO           12    i.Init_KEYs_TIM     main.o
-    0x08000994   0x00000154   Code   RO           13    i.Init_RCC          main.o
-    0x08000ae8   0x00000078   Code   RO           14    i.Init_RTC          main.o
-    0x08000b60   0x0000009c   Code   RO           15    i.Init_TDA          main.o
-    0x08000bfc   0x00000054   Code   RO           16    i.Init_TFT          main.o
-    0x08000c50   0x00000028   Code   RO           17    i.Init_USB          main.o
-    0x08000c78   0x00000054   Code   RO           18    i.SysTick_Handler   main.o
-    0x08000ccc   0x00000064   Code   RO         3732    i.SystemInit        system_stm32f4xx.o
-    0x08000d30   0x00000044   Code   RO           19    i.TEA_set_freq      main.o
-    0x08000d74   0x00000028   Code   RO           20    i.TFT_send          main.o
-    0x08000d9c   0x00002b04   Code   RO           21    i.TIM8_TRG_COM_TIM14_IRQHandler  main.o
-    0x080038a0   0x00000034   Code   RO           22    i.UART5_IRQHandler  main.o
-    0x080038d4   0x00000244   Code   RO           23    i.USB_send          main.o
-    0x08003b18   0x000000d4   Code   RO           24    i.USB_send_par      main.o
-    0x08003bec   0x0000001a   Code   RO           25    i.__NVIC_EnableIRQ  main.o
-    0x08003c06   0x00000002   PAD
-    0x08003c08   0x00000040   Code   RO           26    i.flash_erase_sector  main.o
-    0x08003c48   0x00000006   Code   RO           27    i.flash_read        main.o
-    0x08003c4e   0x00000002   PAD
-    0x08003c50   0x00000010   Code   RO           28    i.flash_ready       main.o
-    0x08003c60   0x00000044   Code   RO           29    i.flash_write       main.o
-    0x08003ca4   0x00000054   Code   RO           30    i.flash_write_newdata  main.o
-    0x08003cf8   0x00000404   Code   RO           31    i.main              main.o
-    0x080040fc   0x0000000a   Code   RO         3856    x$fpl$fpinit        fz_wm.l(fpinit.o)
-    0x08004106   0x00000004   Data   RO           33    .constdata          main.o
-    0x0800410a   0x00000002   PAD
-    0x0800410c   0x00000020   Data   RO         3924    Region$$Table       anon$$obj.o
+    0x08000758   0x000001e0   Code   RO           10    i.Init_GPIO         main.o
+    0x08000938   0x00000034   Code   RO           11    i.Init_I2C1         main.o
+    0x0800096c   0x0000002c   Code   RO           12    i.Init_KEYs_TIM     main.o
+    0x08000998   0x00000154   Code   RO           13    i.Init_RCC          main.o
+    0x08000aec   0x00000078   Code   RO           14    i.Init_RTC          main.o
+    0x08000b64   0x00000214   Code   RO           15    i.Init_TDA          main.o
+    0x08000d78   0x00000054   Code   RO           16    i.Init_TFT          main.o
+    0x08000dcc   0x00000028   Code   RO           17    i.Init_USB          main.o
+    0x08000df4   0x00000024   Code   RO           18    i.SysTick_Handler   main.o
+    0x08000e18   0x00000064   Code   RO         3732    i.SystemInit        system_stm32f4xx.o
+    0x08000e7c   0x00000044   Code   RO           19    i.TEA_set_freq      main.o
+    0x08000ec0   0x00000028   Code   RO           20    i.TFT_send          main.o
+    0x08000ee8   0x0000346c   Code   RO           21    i.TIM8_TRG_COM_TIM14_IRQHandler  main.o
+    0x08004354   0x00000034   Code   RO           22    i.UART5_IRQHandler  main.o
+    0x08004388   0x00000244   Code   RO           23    i.USB_send          main.o
+    0x080045cc   0x000000d4   Code   RO           24    i.USB_send_par      main.o
+    0x080046a0   0x0000001a   Code   RO           25    i.__NVIC_EnableIRQ  main.o
+    0x080046ba   0x00000002   PAD
+    0x080046bc   0x00000040   Code   RO           26    i.flash_erase_sector  main.o
+    0x080046fc   0x00000006   Code   RO           27    i.flash_read        main.o
+    0x08004702   0x00000002   PAD
+    0x08004704   0x00000010   Code   RO           28    i.flash_ready       main.o
+    0x08004714   0x00000044   Code   RO           29    i.flash_write       main.o
+    0x08004758   0x0000016c   Code   RO           30    i.flash_write_newdata  main.o
+    0x080048c4   0x00000544   Code   RO           31    i.main              main.o
+    0x08004e08   0x0000000a   Code   RO         3856    x$fpl$fpinit        fz_wm.l(fpinit.o)
+    0x08004e12   0x00000004   Data   RO           33    .constdata          main.o
+    0x08004e16   0x00000002   PAD
+    0x08004e18   0x00000020   Data   RO         3924    Region$$Table       anon$$obj.o
 
 
-    Execution Region RW_IRAM1 (Base: 0x20000000, Size: 0x00000d18, Max: 0x00020000, ABSOLUTE, COMPRESSED[0x0000028c])
+    Execution Region RW_IRAM1 (Base: 0x20000000, Size: 0x00000d58, Max: 0x00020000, ABSOLUTE, COMPRESSED[0x00000298])
 
     Base Addr    Size         Type   Attr      Idx    E Section Name        Object
 
-    0x20000000   0x00000683   Data   RW           34    .data               main.o
-    0x20000683   0x00000001   PAD
-    0x20000684   0x00000034   Zero   RW           32    .bss                main.o
-    0x200006b8   0x00000060   Zero   RW         3798    .bss                c_w.l(libspace.o)
-    0x20000718   0x00000200   Zero   RW         3722    HEAP                startup_stm32f405xx.o
-    0x20000918   0x00000400   Zero   RW         3721    STACK               startup_stm32f405xx.o
+    0x20000000   0x000006c3   Data   RW           34    .data               main.o
+    0x200006c3   0x00000001   PAD
+    0x200006c4   0x00000034   Zero   RW           32    .bss                main.o
+    0x200006f8   0x00000060   Zero   RW         3798    .bss                c_w.l(libspace.o)
+    0x20000758   0x00000200   Zero   RW         3722    HEAP                startup_stm32f405xx.o
+    0x20000958   0x00000400   Zero   RW         3721    STACK               startup_stm32f405xx.o
 
 
 ==============================================================================
@@ -1912,12 +1912,12 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-     15720       1212          4       1667         52     567826   main.o
+     19060       1340          4       1731         52     569567   main.o
         64         26        392          0       1536        844   startup_stm32f405xx.o
        100         18          0          0          0        505   system_stm32f4xx.o
 
     ----------------------------------------------------------------------
-     15888       1256        430       1668       1588     569175   Object Totals
+     19228       1384        430       1732       1588     570916   Object Totals
          0          0         32          0          0          0   (incl. Generated)
          4          0          2          1          0          0   (incl. Padding)
 
@@ -1968,15 +1968,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-     16254       1272        430       1668       1684     567319   Grand Totals
-     16254       1272        430        652       1684     567319   ELF Image Totals (compressed)
-     16254       1272        430        652          0          0   ROM Totals
+     19594       1400        430       1732       1684     569060   Grand Totals
+     19594       1400        430        664       1684     569060   ELF Image Totals (compressed)
+     19594       1400        430        664          0          0   ROM Totals
 
 ==============================================================================
 
-    Total RO  Size (Code + RO Data)                16684 (  16.29kB)
-    Total RW  Size (RW Data + ZI Data)              3352 (   3.27kB)
-    Total ROM Size (Code + RO Data + RW Data)      17336 (  16.93kB)
+    Total RO  Size (Code + RO Data)                20024 (  19.55kB)
+    Total RW  Size (RW Data + ZI Data)              3416 (   3.34kB)
+    Total ROM Size (Code + RO Data + RW Data)      20688 (  20.20kB)
 
 ==============================================================================
 

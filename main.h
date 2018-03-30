@@ -18,7 +18,12 @@
 #define SysTicks    F_CPU/SysTicksClk
 
 #define	MEM_ADDRESS 		0x0800C000
-#define RADIO_FREQ_ADR	MEM_ADDRESS + 0x4
+#define RADIO_FREQ_ADR	    MEM_ADDRESS + 0x04
+#define TDA_MAIN_LOUD_ADR	MEM_ADDRESS + 0x10
+#define TDA_TREB_ADR	    MEM_ADDRESS + 0x14
+#define TDA_MIDD_ADR	    MEM_ADDRESS + 0x18
+#define TDA_BASS_ADR	    MEM_ADDRESS + 0x1C
+#define TDA_SATT_ADR	    MEM_ADDRESS + 0x20
 
 
 enum PINs
@@ -246,6 +251,11 @@ uint8_t tda_set_midd[56] = {'c','_','f','.','t','x','t','=','"','_','_','0','0',
 uint8_t tda_set_bass[55] = {'c','_','f','.','t','x','t','=','"','_','_','0',' ','H','z','"',255,255,255,\
                             'a','t','t','.','t','x','t','=','"','-','_','_',' ','d','B','"',255,255,255,\
                             'h','_','q','.','t','x','t','=','"','_','.','_','_','"',255,255,255};
+
+uint8_t tda_set_satt_val[64] = {'l','_','f','.','t','x','t','=','"','-','7','9','"',255,255,255,\
+                                'r','_','f','.','t','x','t','=','"','-','7','9','"',255,255,255,\
+                                'l','_','r','.','t','x','t','=','"','-','7','9','"',255,255,255,\
+                                'r','_','r','.','t','x','t','=','"','-','7','9','"',255,255,255};
 
 
 																 
