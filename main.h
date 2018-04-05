@@ -216,7 +216,7 @@ uint8_t main_text_font_4[14] = {'t','e','x','t','.','f','o','n','t','=','4',255,
 uint8_t main_text_font_5[14] = {'t','e','x','t','.','f','o','n','t','=','5',255,255,255};
 uint8_t main_text_font_7[14] = {'t','e','x','t','.','f','o','n','t','=','7',255,255,255};
 	
-uint8_t ADC_text[25] = {'A','D','C','.','t','x','t','=','"','0','0','.','0','V',' ',' ','0','0','.','0','V','"',255,255,255};
+uint8_t ADC_text[25] = {'A','D','C','.','t','x','t','=','"','0','0','.','0','V',' ',' ',' ','0','0','0','%','"',255,255,255};
     
 uint8_t tda_sett_pages[5][20] = {{'p','a','g','e',' ','t','d','a','_','l','o','u','d',255,255,255},
                                  {'p','a','g','e',' ','t','d','a','_','t','r','e','b',255,255,255},
@@ -306,8 +306,9 @@ enum BT_Statuses
 
 enum USB_Statuses
 {
-    USB_PAUSE=0,
-    USB_PLAY
+    USB_STOP=0,
+    USB_PLAY,
+    USB_PAUSE
 };
 
 uint8_t USB_command[4]  = {0x7E, 0x02, 0, 0xEF};
@@ -353,4 +354,6 @@ uint8_t TEA_set_freq(uint16_t freq);
 uint8_t Init_TDA(void);
 
 void Init_ADC(void);
-	
+
+void Init_IWDG(void);
+void IWDG_res(void);
